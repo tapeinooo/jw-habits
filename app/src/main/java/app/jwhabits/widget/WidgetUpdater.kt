@@ -20,7 +20,7 @@ object WidgetUpdater {
     /** 4つのウィジェットをまとめて描き直す。 */
     suspend fun updateAll(context: Context) {
         version.value++
-        val widgets: List<GlanceAppWidget> = listOf(TodayWidget(), NextChapterWidget(), StudyWidget(), TimerWidget())
+        val widgets: List<GlanceAppWidget> = listOf(DailyWidget(), TodayWidget(), NextChapterWidget(), StudyWidget(), TimerWidget())
         widgets.forEach { runCatching { it.updateAll(context) } }
     }
 }

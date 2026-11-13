@@ -4,4 +4,5 @@
     <string name="widget_next_chapter_desc">次に読む章と、ワンタップの記録</string>
     <string name="widget_study_desc">今使っている資料の次の単位と、ワンタップの記録</string>
     <string name="widget_timer_desc">奉仕タイマーの開始・終了と今月の合計</string>
+    <string name="widget_daily_desc">通読・研究・奉仕を1行で。まだのものを知らせる</string>
 </resources>
