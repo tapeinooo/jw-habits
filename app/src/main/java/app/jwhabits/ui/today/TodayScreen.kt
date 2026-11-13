@@ -18,13 +18,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.jwhabits.data.AppDatabase
 import app.jwhabits.ui.LocalUndoer
+import app.jwhabits.domain.ServiceMath
+import app.jwhabits.ui.service.ServiceViewModel
+import app.jwhabits.ui.service.TimerButton
 import app.jwhabits.ui.study.CurrentMaterialNext
 import app.jwhabits.ui.study.StudiedTodayButton
 import app.jwhabits.ui.study.StudyViewModel
 import app.jwhabits.ui.units.NextRowFor
 import app.jwhabits.ui.units.UnitViewModel
 
-/** 今日の画面。聖書通読と個人研究（奉仕・カレンダーは後の段階で足す）。 */
+/** 今日の画面。聖書通読・個人研究・奉仕（カレンダーは後の段階で足す）。 */
 @Composable
 fun TodayScreen(
     onOpenBible: () -> Unit,
@@ -34,11 +37,13 @@ fun TodayScreen(
         factory = UnitViewModel.factory(AppDatabase.MATERIAL_BIBLE_READING),
     ),
     study: StudyViewModel = viewModel(factory = StudyViewModel.Factory),
+    service: ServiceViewModel = viewModel(factory = ServiceViewModel.Factory),
 ) {
     val undoer = LocalUndoer.current
     val state by bible.state.collectAsStateWithLifecycle()
     val studied by study.studiedToday.collectAsStateWithLifecycle()
     val currentId by study.currentId.collectAsStateWithLifecycle()
+    val monthMinutes by service.currentMonthMinutes.collectAsStateWithLifecycle()
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -65,5 +70,15 @@ fun TodayScreen(
             }
         }
         CurrentMaterialNext(currentId, onOpen = null)
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("奉仕", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "今月 ${ServiceMath.formatDuration(monthMinutes)}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TimerButton(service)
+            }
+        }
     }
 }

@@ -29,6 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun materialDao(): MaterialDao
     abstract fun unitRecordDao(): UnitRecordDao
     abstract fun dayRecordDao(): DayRecordDao
+    abstract fun serviceDao(): ServiceDao
 
     companion object {
         const val HABIT_BIBLE_READING = 1L

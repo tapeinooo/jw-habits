@@ -27,12 +27,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.jwhabits.domain.SharedPayload
 import app.jwhabits.ui.bible.BibleScreen
+import app.jwhabits.ui.service.ServiceScreen
 import app.jwhabits.ui.study.ShareReceiveDialog
 import app.jwhabits.ui.study.StudyScreen
 import app.jwhabits.ui.study.StudyViewModel
@@ -88,7 +88,7 @@ fun AppRoot(pendingShare: MutableState<SharedPayload?> = remember { mutableState
                     Tab.TODAY -> TodayScreen(onOpenBible = { tab = Tab.BIBLE }, onOpenStudy = { tab = Tab.STUDY })
                     Tab.BIBLE -> BibleScreen()
                     Tab.STUDY -> StudyScreen()
-                    Tab.SERVICE -> ComingSoon("奉仕")
+                    Tab.SERVICE -> ServiceScreen()
                 }
             }
         }
@@ -99,12 +99,5 @@ fun AppRoot(pendingShare: MutableState<SharedPayload?> = remember { mutableState
                 if (saved) tab = Tab.STUDY
             }
         }
-    }
-}
-
-@Composable
-private fun ComingSoon(name: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("$name は準備中です")
     }
 }

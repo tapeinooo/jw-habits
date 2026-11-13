@@ -93,3 +93,34 @@ interface DayRecordDao {
     @Query("SELECT EXISTS(SELECT 1 FROM day_record WHERE habitId = :habitId AND date = :date)")
     fun observeExists(habitId: Long, date: LocalDate): Flow<Boolean>
 }
+
+@Dao
+interface ServiceDao {
+    @Query("SELECT * FROM service_record WHERE date BETWEEN :from AND :to ORDER BY date DESC, COALESCE(startEpochMs, 0) DESC, id DESC")
+    fun observeRange(from: LocalDate, to: LocalDate): Flow<List<ServiceRecordEntity>>
+
+    @Query("SELECT * FROM service_record WHERE startEpochMs IS NOT NULL AND endEpochMs IS NULL AND minutes IS NULL LIMIT 1")
+    fun observeRunning(): Flow<ServiceRecordEntity?>
+
+    @Query("SELECT * FROM service_record WHERE startEpochMs IS NOT NULL AND endEpochMs IS NULL AND minutes IS NULL LIMIT 1")
+    suspend fun getRunning(): ServiceRecordEntity?
+
+    /** id が 0 なら新しく、あればその id で入れ直す（元に戻す用）。 */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(record: ServiceRecordEntity): Long
+
+    @Update
+    suspend fun update(record: ServiceRecordEntity)
+
+    @Query("DELETE FROM service_record WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM service_month WHERE yearMonth = :ym")
+    fun observeMonth(ym: String): Flow<ServiceMonthEntity?>
+
+    @Query("SELECT * FROM service_month WHERE yearMonth = :ym")
+    suspend fun getMonth(ym: String): ServiceMonthEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertMonth(month: ServiceMonthEntity)
+}
