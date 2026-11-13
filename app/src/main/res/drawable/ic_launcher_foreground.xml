@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 閉じた聖書（革の表紙・金の小口・しおりのリボン）。十字架は描かない。108dp のうち中央 66dp が安全域。 -->
+<!-- 閉じた聖書（シルバーの表紙・しおりのリボン）。十字架は描かない。108dp のうち中央 66dp が安全域。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -11,30 +11,30 @@
         android:pathData="M62,74 L68,74 L68,89 L65,86 L62,89 Z" />
     <!-- ページの束（右と下に少し見える） -->
     <path
-        android:fillColor="#F1DFA6"
+        android:fillColor="#E6EAEE"
         android:pathData="M39,30 L75,30 Q78,30 78,33 L78,77 Q78,80 75,80 L39,80 Z" />
     <!-- 小口の線 -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#D9B95C"
+        android:strokeColor="#A3ABB5"
         android:strokeWidth="0.8"
         android:pathData="M76,34 L76,76 M74.5,34 L74.5,76" />
     <!-- 表紙 -->
     <path
-        android:fillColor="#6B3A22"
+        android:fillColor="#B9C0C8"
         android:pathData="M36,26 L71,26 Q74,26 74,29 L74,75 Q74,78 71,78 L36,78 Q33,78 33,75 L33,29 Q33,26 36,26 Z" />
     <!-- 背（少し濃い） -->
     <path
-        android:fillColor="#4E2814"
+        android:fillColor="#8F98A3"
         android:pathData="M36,26 L40,26 L40,78 L36,78 Q33,78 33,75 L33,29 Q33,26 36,26 Z" />
-    <!-- 金の縁取り -->
+    <!-- 縁取り（明るい銀） -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#D9B95C"
+        android:strokeColor="#EEF1F4"
         android:strokeWidth="1.2"
         android:pathData="M44,31 L69,31 L69,73 L44,73 Z" />
-    <!-- 題字の代わりの金の線 -->
+    <!-- 題字の代わりの線 -->
     <path
-        android:fillColor="#D9B95C"
+        android:fillColor="#6F7883"
         android:pathData="M49,42 L64,42 L64,44.5 L49,44.5 Z M51,48 L62,48 L62,50 L51,50 Z" />
 </vector>
