@@ -34,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.jwhabits.domain.SharedPayload
 import app.jwhabits.ui.bible.BibleScreen
 import app.jwhabits.ui.service.ServiceScreen
+import app.jwhabits.ui.settings.SettingsScreen
 import app.jwhabits.ui.study.ShareReceiveDialog
 import app.jwhabits.ui.study.StudyScreen
 import app.jwhabits.ui.study.StudyViewModel
@@ -50,6 +51,14 @@ enum class Tab(val label: String, val icon: ImageVector) {
 
 /** 記録のあとに「元に戻す」を出す。入力画面は出さず、誤タップはこれで戻す。 */
 class Undoer(private val host: SnackbarHostState, private val scope: CoroutineScope) {
+    /** 「元に戻す」なしの短いお知らせ。 */
+    fun message(text: String) {
+        scope.launch {
+            host.currentSnackbarData?.dismiss()
+            host.showSnackbar(text, duration = SnackbarDuration.Short)
+        }
+    }
+
     fun offer(message: String, undo: suspend () -> Unit) {
         scope.launch {
             host.currentSnackbarData?.dismiss()
@@ -67,6 +76,7 @@ fun AppRoot(
     pendingTab: MutableState<Tab?> = remember { mutableStateOf(null) },
 ) {
     var tab by rememberSaveable { mutableStateOf(Tab.TODAY) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
     pendingTab.value?.let { requested ->
         LaunchedEffect(requested) {
             tab = requested
@@ -85,7 +95,7 @@ fun AppRoot(
                     Tab.entries.forEach { t ->
                         NavigationBarItem(
                             selected = tab == t,
-                            onClick = { tab = t },
+                            onClick = { tab = t; showSettings = false },
                             icon = { Icon(t.icon, contentDescription = null) },
                             label = { Text(t.label) },
                         )
@@ -94,11 +104,19 @@ fun AppRoot(
             },
         ) { padding ->
             Box(Modifier.padding(padding).fillMaxSize()) {
-                when (tab) {
-                    Tab.TODAY -> TodayScreen(onOpenBible = { tab = Tab.BIBLE }, onOpenStudy = { tab = Tab.STUDY })
-                    Tab.BIBLE -> BibleScreen()
-                    Tab.STUDY -> StudyScreen()
-                    Tab.SERVICE -> ServiceScreen()
+                if (showSettings) {
+                    SettingsScreen(onBack = { showSettings = false })
+                } else {
+                    when (tab) {
+                        Tab.TODAY -> TodayScreen(
+                            onOpenBible = { tab = Tab.BIBLE },
+                            onOpenStudy = { tab = Tab.STUDY },
+                            onOpenSettings = { showSettings = true },
+                        )
+                        Tab.BIBLE -> BibleScreen()
+                        Tab.STUDY -> StudyScreen()
+                        Tab.SERVICE -> ServiceScreen()
+                    }
                 }
             }
         }

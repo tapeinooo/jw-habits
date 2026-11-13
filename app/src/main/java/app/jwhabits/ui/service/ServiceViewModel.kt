@@ -108,8 +108,7 @@ class ServiceViewModel(
     val baseRole: StateFlow<ServiceRole> = prefs.role
     val annualGoal: StateFlow<Int> = prefs.annualGoal
     val monthlyGoal: StateFlow<Int> = prefs.monthlyGoal
-    private val _cutoff = MutableStateFlow(clock.cutoffHour)
-    val cutoffHour: StateFlow<Int> = _cutoff
+    val cutoffHour: StateFlow<Int> = clock.cutoffFlow
 
     fun today(): LocalDate = repo.today()
 
@@ -148,7 +147,6 @@ class ServiceViewModel(
         prefs.setAnnualGoal(annual)
         prefs.setMonthlyGoal(monthly)
         clock.cutoffHour = cutoff
-        _cutoff.value = clock.cutoffHour
     }
 
     companion object {

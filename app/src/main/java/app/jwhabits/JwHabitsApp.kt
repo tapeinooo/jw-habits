@@ -3,6 +3,7 @@ package app.jwhabits
 import android.app.Application
 import app.jwhabits.data.AppDatabase
 import app.jwhabits.data.CalendarRepository
+import app.jwhabits.data.backup.BackupRepository
 import app.jwhabits.data.ServicePrefs
 import app.jwhabits.data.ServiceRepository
 import app.jwhabits.data.StudyPrefs
@@ -32,6 +33,7 @@ class JwHabitsApp : Application() {
     val study: StudyRepository by lazy { StudyRepository(db, clock, studyPrefs) }
     val servicePrefs: ServicePrefs by lazy { ServicePrefs(this) }
     val service: ServiceRepository by lazy { ServiceRepository(db, clock) }
+    val backup: BackupRepository by lazy { BackupRepository(this, db, clock, studyPrefs, servicePrefs) }
     val calendar: CalendarRepository by lazy { CalendarRepository(db, clock) }
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

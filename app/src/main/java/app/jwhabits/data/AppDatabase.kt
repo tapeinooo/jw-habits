@@ -20,7 +20,7 @@ class Converters {
         HabitEntity::class, MaterialEntity::class, UnitRecordEntity::class,
         DayRecordEntity::class, ServiceRecordEntity::class, ServiceMonthEntity::class,
     ],
-    version = 2,
+    version = AppDatabase.VERSION,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -32,6 +32,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun serviceDao(): ServiceDao
 
     companion object {
+        const val VERSION = 2
         const val HABIT_BIBLE_READING = 1L
         const val HABIT_STUDY = 2L
         const val HABIT_SERVICE = 3L

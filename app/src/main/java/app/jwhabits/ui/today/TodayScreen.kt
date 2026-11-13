@@ -17,9 +17,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -62,6 +64,7 @@ private fun DayMark.label(): String = when (this) {
 fun TodayScreen(
     onOpenBible: () -> Unit,
     onOpenStudy: () -> Unit,
+    onOpenSettings: () -> Unit = {},
     bible: UnitViewModel = viewModel(
         key = UnitViewModel.key(AppDatabase.MATERIAL_BIBLE_READING),
         factory = UnitViewModel.factory(AppDatabase.MATERIAL_BIBLE_READING),
@@ -82,7 +85,10 @@ fun TodayScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("今日", style = MaterialTheme.typography.headlineSmall)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("今日", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            IconButton(onClick = onOpenSettings) { Icon(Icons.Filled.Settings, contentDescription = "設定") }
+        }
 
         StatusRow(
             title = "聖書通読",

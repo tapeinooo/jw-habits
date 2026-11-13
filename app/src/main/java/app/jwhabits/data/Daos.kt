@@ -30,6 +30,15 @@ interface MaterialDao {
 
     @Update
     suspend fun update(material: MaterialEntity)
+    @Query("SELECT * FROM material ORDER BY id")
+    suspend fun getAll(): List<MaterialEntity>
+
+    @Query("DELETE FROM material")
+    suspend fun deleteAll()
+
+    /** バックアップの読み込み用。id をそのまま入れる。 */
+    @Insert
+    suspend fun restoreAll(materials: List<MaterialEntity>)
 }
 
 @Dao
@@ -75,6 +84,14 @@ interface UnitRecordDao {
 
     @Query("DELETE FROM unit_record WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<Long>)
+    @Query("SELECT * FROM unit_record ORDER BY id")
+    suspend fun getAll(): List<UnitRecordEntity>
+
+    @Query("DELETE FROM unit_record")
+    suspend fun deleteAll()
+
+    @Insert
+    suspend fun restoreAll(records: List<UnitRecordEntity>)
 }
 
 @Dao
@@ -84,6 +101,14 @@ interface HabitDao {
 
     @Query("SELECT * FROM habit ORDER BY sortOrder")
     fun observeAll(): Flow<List<HabitEntity>>
+    @Query("SELECT * FROM habit ORDER BY id")
+    suspend fun getAll(): List<HabitEntity>
+
+    @Query("DELETE FROM habit")
+    suspend fun deleteAll()
+
+    @Insert
+    suspend fun restoreAll(habits: List<HabitEntity>)
 }
 
 data class MaterialCount(val materialId: Long, val count: Int)
@@ -105,6 +130,14 @@ interface DayRecordDao {
 
     @Query("SELECT date FROM day_record WHERE habitId = :habitId")
     fun observeDates(habitId: Long): Flow<List<LocalDate>>
+    @Query("SELECT * FROM day_record ORDER BY habitId, date")
+    suspend fun getAll(): List<DayRecordEntity>
+
+    @Query("DELETE FROM day_record")
+    suspend fun deleteAll()
+
+    @Insert
+    suspend fun restoreAll(records: List<DayRecordEntity>)
 }
 
 @Dao
@@ -139,4 +172,21 @@ interface ServiceDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertMonth(month: ServiceMonthEntity)
+    @Query("SELECT * FROM service_record ORDER BY id")
+    suspend fun getAllRecords(): List<ServiceRecordEntity>
+
+    @Query("DELETE FROM service_record")
+    suspend fun deleteAllRecords()
+
+    @Insert
+    suspend fun restoreRecords(records: List<ServiceRecordEntity>)
+
+    @Query("SELECT * FROM service_month ORDER BY yearMonth")
+    suspend fun getAllMonths(): List<ServiceMonthEntity>
+
+    @Query("DELETE FROM service_month")
+    suspend fun deleteAllMonths()
+
+    @Insert
+    suspend fun restoreMonths(months: List<ServiceMonthEntity>)
 }
