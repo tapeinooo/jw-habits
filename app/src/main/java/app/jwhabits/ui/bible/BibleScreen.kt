@@ -71,6 +71,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.layout.ColumnScope
+import app.jwhabits.data.AppDatabase
+import app.jwhabits.ui.units.GridMode
+import app.jwhabits.ui.units.ModeBanner
+import app.jwhabits.ui.units.ModeMenuItems
+import app.jwhabits.ui.units.NextRoundDialog
+import app.jwhabits.ui.units.NextRowFor
+import app.jwhabits.ui.units.UnitCells
+import app.jwhabits.ui.units.UnitDatePickerDialog
+import app.jwhabits.ui.units.UnitTopBar
+import app.jwhabits.ui.units.UnitUiState
+import app.jwhabits.ui.units.UnitViewModel
 import app.jwhabits.domain.BibleBook
 import app.jwhabits.domain.BibleBooks
 import app.jwhabits.domain.ChapterRef
@@ -82,52 +94,56 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 
+/** 聖書通読のタブ。 */
 @Composable
-fun BibleScreen(vm: BibleViewModel = viewModel(factory = BibleViewModel.Factory)) {
+fun BibleScreen(
+    vm: UnitViewModel = viewModel(
+        key = UnitViewModel.key(AppDatabase.MATERIAL_BIBLE_READING),
+        factory = UnitViewModel.factory(AppDatabase.MATERIAL_BIBLE_READING),
+    ),
+) {
     val state by vm.state.collectAsStateWithLifecycle()
-    var bookNumber by rememberSaveable { mutableStateOf<Int?>(null) }
+    BibleUnits(state, vm, listTitle = null, onExit = null)
+}
 
+/**
+ * 66書のタイル → 章のマス目。聖書通読と、聖書全体の研究用の資料で共通。
+ * onExit があれば（研究用の資料）、書の一覧にも上のバーを出して、戻る先を onExit にする。
+ */
+@Composable
+fun BibleUnits(
+    state: UnitUiState,
+    vm: UnitViewModel,
+    listTitle: String?,
+    onExit: (() -> Unit)?,
+    menuExtras: @Composable ColumnScope.(close: () -> Unit) -> Unit = {},
+) {
+    var bookNumber by rememberSaveable { mutableStateOf<Int?>(null) }
     val current = bookNumber
     if (current == null) {
-        BookList(state, vm, onOpenBook = { bookNumber = it.number })
+        if (onExit != null) {
+            BackHandler(onBack = onExit)
+            Column(Modifier.fillMaxSize()) {
+                UnitTopBar(listTitle.orEmpty(), "資料の一覧へ", onExit) { close -> menuExtras(close) }
+                BookList(state, vm, onOpenBook = { bookNumber = it.number }, modifier = Modifier.weight(1f))
+            }
+        } else {
+            BookList(state, vm, onOpenBook = { bookNumber = it.number })
+        }
     } else {
         BackHandler { bookNumber = null }
-        ChapterGrid(BibleBooks.book(current), state, vm, onBack = { bookNumber = null }, onOpenBook = { bookNumber = it.number })
-    }
-}
-
-/** 「次：創世記 12章 ✓」。✓で記録、名前タップでその書へ、名前長押しで JW Library。 */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun NextChapterRow(next: ChapterRef?, vm: BibleViewModel, onOpenBook: ((BibleBook) -> Unit)?, modifier: Modifier = Modifier) {
-    if (next == null) return
-    val undoer = LocalUndoer.current
-    val context = LocalContext.current
-    Card(modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-        Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "次：${next.label}",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f).combinedClickable(
-                    onClick = { onOpenBook?.invoke(next.book) },
-                    onLongClick = { JwLibrary.open(context, JwLibrary.chapterUrl(next)) },
-                ),
-            )
-            FilledTonalIconButton(onClick = { vm.toggle(next.index, undoer::offer) }) {
-                Icon(Icons.Filled.Check, contentDescription = "${next.label} を記録")
-            }
-        }
+        ChapterGrid(BibleBooks.book(current), state, vm, onBack = { bookNumber = null }, onOpenBook = { bookNumber = it.number }, menuExtras)
     }
 }
 
 @Composable
-private fun BookList(state: BibleUiState, vm: BibleViewModel, onOpenBook: (BibleBook) -> Unit) {
+private fun BookList(state: UnitUiState, vm: UnitViewModel, onOpenBook: (BibleBook) -> Unit, modifier: Modifier = Modifier.fillMaxSize()) {
     var confirmNextRound by remember { mutableStateOf(false) }
     val full: (androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> GridItemSpan) = { GridItemSpan(maxLineSpan) }
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(76.dp),
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -148,7 +164,7 @@ private fun BookList(state: BibleUiState, vm: BibleViewModel, onOpenBook: (Bible
                         }
                     }
                 } else {
-                    NextChapterRow(state.next, vm, onOpenBook)
+                    NextRowFor(state, vm, onClickLabel = { onOpenBook(BibleBooks.chapterAt(it).book) })
                 }
             }
         }
@@ -158,15 +174,7 @@ private fun BookList(state: BibleUiState, vm: BibleViewModel, onOpenBook: (Bible
         items(BibleBooks.all.filterNot { it.isHebrew }, key = { it.number }) { BookTile(it, state.readIn(it), onOpenBook) }
     }
 
-    if (confirmNextRound) {
-        AlertDialog(
-            onDismissRequest = { confirmNextRound = false },
-            title = { Text("${state.round + 1}周目を始めますか") },
-            text = { Text("${state.round}周目の記録は履歴に残ります。") },
-            confirmButton = { TextButton(onClick = { confirmNextRound = false; vm.startNextRound() }) { Text("始める") } },
-            dismissButton = { TextButton(onClick = { confirmNextRound = false }) { Text("やめる") } },
-        )
-    }
+    if (confirmNextRound) NextRoundDialog(state.round, { confirmNextRound = false }) { vm.startNextRound() }
 }
 
 @Composable
@@ -207,213 +215,47 @@ private fun BookTile(book: BibleBook, readCount: Int, onOpenBook: (BibleBook) ->
     }
 }
 
-private enum class GridMode { NORMAL, RANGE, DATE }
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChapterGrid(
     book: BibleBook,
-    state: BibleUiState,
-    vm: BibleViewModel,
+    state: UnitUiState,
+    vm: UnitViewModel,
     onBack: () -> Unit,
     onOpenBook: (BibleBook) -> Unit,
+    menuExtras: @Composable ColumnScope.(close: () -> Unit) -> Unit,
 ) {
     var mode by rememberSaveable(book.number) { mutableStateOf(GridMode.NORMAL) }
-    var menu by remember { mutableStateOf(false) }
     var dateTarget by remember { mutableStateOf<Int?>(null) }
 
     Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            windowInsets = WindowInsets(0), // 外側の Scaffold がすでに余白を取っている
-            title = { Text("${book.name}  ${state.readIn(book)}/${book.chapters}") },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "書の一覧へ") } },
-            actions = {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "メニュー") }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text("なぞってまとめて記録") }, onClick = { menu = false; mode = GridMode.RANGE })
-                    DropdownMenuItem(text = { Text("読んだ日を直す") }, onClick = { menu = false; mode = GridMode.DATE })
-                }
-            },
-        )
-        when (mode) {
-            GridMode.NORMAL -> NextChapterRow(state.next, vm, onOpenBook, Modifier.padding(horizontal = 12.dp))
-            GridMode.RANGE -> ModeBanner("記録したい章を指でなぞってください") { mode = GridMode.NORMAL }
-            GridMode.DATE -> ModeBanner("日付を直す章をタップしてください") { mode = GridMode.NORMAL }
+        UnitTopBar("${book.name}  ${state.readIn(book)}/${book.chapters}", "書の一覧へ", onBack) { close ->
+            ModeMenuItems({ mode = it }, close)
+            menuExtras(close)
+        }
+        if (mode == GridMode.NORMAL) {
+            NextRowFor(state, vm, Modifier.padding(horizontal = 12.dp), onClickLabel = { onOpenBook(BibleBooks.chapterAt(it).book) })
+        } else {
+            ModeBanner(mode, "章") { mode = GridMode.NORMAL }
         }
         Spacer(Modifier.height(8.dp))
-        ChapterCells(
-            book = book,
+        UnitCells(
+            count = book.chapters,
             state = state,
             mode = mode,
             vm = vm,
+            indexOf = book::indexOf,
             onPickDate = { dateTarget = it },
             modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
         )
     }
 
     dateTarget?.let { index ->
-        val initial = state.read[index]?.date ?: vm.today()
-        val picker = rememberDatePickerState(
-            initialSelectedDateMillis = initial.toEpochDay() * 86_400_000L,
-            selectableDates = object : androidx.compose.material3.SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= vm.today().toEpochDay() * 86_400_000L
-            },
+        UnitDatePickerDialog(
+            title = BibleBooks.chapterAt(index).label,
+            initial = state.read[index]?.date ?: vm.today(),
+            today = vm.today(),
+            onSave = { vm.setDate(index, it) },
+            onDismiss = { dateTarget = null },
         )
-        DatePickerDialog(
-            onDismissRequest = { dateTarget = null },
-            confirmButton = {
-                TextButton(onClick = {
-                    picker.selectedDateMillis?.let {
-                        vm.setDate(index, Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate())
-                    }
-                    dateTarget = null
-                }) { Text("保存") }
-            },
-            dismissButton = { TextButton(onClick = { dateTarget = null }) { Text("やめる") } },
-        ) {
-            DatePicker(picker, title = { Text(BibleBooks.chapterAt(index).label, Modifier.padding(start = 24.dp, top = 16.dp)) })
-        }
     }
 }
-
-@Composable
-private fun ModeBanner(text: String, onDone: () -> Unit) {
-    Card(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-    ) {
-        Row(Modifier.padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(text, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            TextButton(onClick = onDone) { Text("完了") }
-        }
-    }
-}
-
-/**
- * 章番号のマス目。
- * 通常：タップで記録／取り消し、長押しで JW Library。
- * なぞる：指を置いた章から今の章までを範囲として塗り、離すと記録する（端に来たら自動でスクロール）。
- * 日付：タップで日付を選ぶ。
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ChapterCells(
-    book: BibleBook,
-    state: BibleUiState,
-    mode: GridMode,
-    vm: BibleViewModel,
-    onPickDate: (Int) -> Unit,
-    modifier: Modifier,
-) {
-    val undoer = LocalUndoer.current
-    val context = LocalContext.current
-    val haptics = LocalHapticFeedback.current
-    val gridState = rememberLazyGridState()
-    val today = vm.today()
-
-    // なぞっている範囲（章番号 1始まり）
-    var dragStart by remember { mutableStateOf<Int?>(null) }
-    var dragEnd by remember { mutableStateOf<Int?>(null) }
-    var pointer by remember { mutableStateOf(Offset.Zero) }
-    var autoScroll by remember { mutableFloatStateOf(0f) }
-    val edge = with(LocalDensity.current) { 56.dp.toPx() }
-    val painted = dragStart?.let { s -> dragEnd?.let { e -> ReadingProgress.range(s, e) } }
-
-    LaunchedEffect(autoScroll) {
-        while (autoScroll != 0f) {
-            gridState.scrollBy(autoScroll)
-            chapterAt(gridState, pointer)?.let { dragEnd = it }
-            delay(16)
-        }
-    }
-
-    val dragModifier = if (mode == GridMode.RANGE) {
-        Modifier.pointerInput(book.number) {
-            detectDragGestures(
-                onDragStart = { p ->
-                    pointer = p
-                    dragStart = chapterAt(gridState, p)
-                    dragEnd = dragStart
-                    if (dragStart != null) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                },
-                onDrag = { change, _ ->
-                    pointer = change.position
-                    chapterAt(gridState, pointer)?.let { dragEnd = it }
-                    autoScroll = when {
-                        pointer.y < edge -> -12f
-                        pointer.y > size.height - edge -> 12f
-                        else -> 0f
-                    }
-                },
-                onDragEnd = {
-                    autoScroll = 0f
-                    val s = dragStart
-                    val e = dragEnd
-                    if (s != null && e != null) {
-                        vm.markRange(ReadingProgress.range(s, e).map { book.indexOf(it) }, undoer::offer)
-                    }
-                    dragStart = null; dragEnd = null
-                },
-                onDragCancel = { autoScroll = 0f; dragStart = null; dragEnd = null },
-            )
-        }
-    } else Modifier
-
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(56.dp),
-        state = gridState,
-        userScrollEnabled = mode != GridMode.RANGE,
-        modifier = modifier.then(dragModifier),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        items((1..book.chapters).toList(), key = { it }) { chapter ->
-            val index = book.indexOf(chapter)
-            val record = state.read[index]
-            val isPainted = painted != null && chapter in painted
-            val scheme = MaterialTheme.colorScheme
-            val bg = when {
-                isPainted -> scheme.tertiary
-                record != null -> scheme.primary
-                else -> scheme.surfaceVariant
-            }
-            val fg = when {
-                isPainted -> scheme.onTertiary
-                record != null -> scheme.onPrimary
-                else -> scheme.onSurfaceVariant
-            }
-            val clickMod = when (mode) {
-                GridMode.NORMAL -> Modifier.combinedClickable(
-                    onClick = { vm.toggle(index, undoer::offer) },
-                    onLongClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        JwLibrary.open(context, JwLibrary.chapterUrl(book.number, chapter))
-                    },
-                )
-                GridMode.DATE -> Modifier.combinedClickable(onClick = { onPickDate(index) })
-                GridMode.RANGE -> Modifier
-            }
-            Box(
-                Modifier.aspectRatio(1f).clip(RoundedCornerShape(8.dp)).background(bg).then(clickMod),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("$chapter", color = fg, fontWeight = if (record != null) FontWeight.Bold else FontWeight.Normal)
-                    if (record != null && !isPainted) {
-                        Text(shortDate(record.date, today), color = fg.copy(alpha = 0.8f), fontSize = 9.sp)
-                    }
-                }
-            }
-        }
-    }
-}
-
-/** 指の位置にある章（1始まり）。 */
-private fun chapterAt(state: LazyGridState, p: Offset): Int? =
-    state.layoutInfo.visibleItemsInfo.firstOrNull { item ->
-        p.x >= item.offset.x && p.x < item.offset.x + item.size.width &&
-            p.y >= item.offset.y && p.y < item.offset.y + item.size.height
-    }?.key as? Int
-
-private fun shortDate(d: LocalDate, today: LocalDate): String =
-    if (d.year == today.year) "${d.monthValue}/${d.dayOfMonth}" else "${d.year % 100}/${d.monthValue}/${d.dayOfMonth}"

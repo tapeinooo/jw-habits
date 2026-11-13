@@ -40,6 +40,8 @@ data class MaterialEntity(
     val round: Int = 1,
     val sortOrder: Int = 0,
     val archived: Boolean = false,
+    /** ものみの塔の号。"2026-11" の形。それ以外の資料は null */
+    val issue: String? = null,
 )
 
 /** 単位の記録（章・研究・記事を読んだ日）。前の周の記録も残す。 */

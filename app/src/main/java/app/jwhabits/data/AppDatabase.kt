@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import java.time.LocalDate
 
@@ -19,7 +20,7 @@ class Converters {
         HabitEntity::class, MaterialEntity::class, UnitRecordEntity::class,
         DayRecordEntity::class, ServiceRecordEntity::class, ServiceMonthEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -27,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun habitDao(): HabitDao
     abstract fun materialDao(): MaterialDao
     abstract fun unitRecordDao(): UnitRecordDao
+    abstract fun dayRecordDao(): DayRecordDao
 
     companion object {
         const val HABIT_BIBLE_READING = 1L
@@ -34,9 +36,16 @@ abstract class AppDatabase : RoomDatabase() {
         const val HABIT_SERVICE = 3L
         const val MATERIAL_BIBLE_READING = 1L
 
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE material ADD COLUMN issue TEXT")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "jw-habits.db")
                 .addCallback(Seed)
+                .addMigrations(MIGRATION_1_2)
                 .build()
     }
 

@@ -18,6 +18,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,7 +30,12 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.viewmodel.compose.viewModel
+import app.jwhabits.domain.SharedPayload
 import app.jwhabits.ui.bible.BibleScreen
+import app.jwhabits.ui.study.ShareReceiveDialog
+import app.jwhabits.ui.study.StudyScreen
+import app.jwhabits.ui.study.StudyViewModel
 import app.jwhabits.ui.today.TodayScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -55,7 +61,7 @@ class Undoer(private val host: SnackbarHostState, private val scope: CoroutineSc
 val LocalUndoer = staticCompositionLocalOf<Undoer> { error("Undoer not provided") }
 
 @Composable
-fun AppRoot() {
+fun AppRoot(pendingShare: MutableState<SharedPayload?> = remember { mutableStateOf(null) }) {
     var tab by rememberSaveable { mutableStateOf(Tab.TODAY) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -79,11 +85,18 @@ fun AppRoot() {
         ) { padding ->
             Box(Modifier.padding(padding).fillMaxSize()) {
                 when (tab) {
-                    Tab.TODAY -> TodayScreen(onOpenBible = { tab = Tab.BIBLE })
+                    Tab.TODAY -> TodayScreen(onOpenBible = { tab = Tab.BIBLE }, onOpenStudy = { tab = Tab.STUDY })
                     Tab.BIBLE -> BibleScreen()
-                    Tab.STUDY -> ComingSoon("個人研究")
+                    Tab.STUDY -> StudyScreen()
                     Tab.SERVICE -> ComingSoon("奉仕")
                 }
+            }
+        }
+        pendingShare.value?.let { payload ->
+            val study: StudyViewModel = viewModel(factory = StudyViewModel.Factory)
+            ShareReceiveDialog(payload, study) { saved ->
+                pendingShare.value = null
+                if (saved) tab = Tab.STUDY
             }
         }
     }
