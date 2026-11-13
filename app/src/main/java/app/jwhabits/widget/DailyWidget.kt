@@ -1,11 +1,17 @@
 package app.jwhabits.widget
 
 import android.content.Context
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
+import androidx.glance.layout.Box
+import androidx.glance.text.FontWeight
+import androidx.glance.text.Text
+import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -23,21 +29,22 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
 import app.jwhabits.JwHabitsApp
-import app.jwhabits.domain.ServiceMath
 import app.jwhabits.ui.Tab
 import java.time.YearMonth
 
 /**
  * 「今日の3つ」ウィジェット（1行）。
- * 左：聖書通読（今日やったか＋次の章）、中：個人研究（今日やったか＋今の資料の次）、右：今月の奉仕時間とレッスン。
- * 通読と研究は、まだのとき赤みのある背景で知らせる。タップでそれぞれのタブを開く。
+ * 左：聖書通読の次の章（シルバー）、中：今使っている資料の次（紺）、右：今月の奉仕時間とレッスンの数（透明）。
+ * ラベルは出さず中身だけ。通読と研究は、まだの日ははっきりした色、済んだら薄くして ✓。タップでそれぞれのタブを開く。
  */
 class DailyWidget : GlanceAppWidget() {
     data class Data(
         val bibleDone: Boolean,
-        val bibleNext: String,
+        val bibleBook: String,
+        val bibleNumber: String,
         val studyDone: Boolean,
-        val studyNext: String,
+        val studyText: String,
+        val studyNumber: String,
         val serviceMinutes: Long,
         val lessons: Int,
     )
@@ -47,28 +54,31 @@ class DailyWidget : GlanceAppWidget() {
         val initial = load(app)
         provideContent {
             val d = rememberWidgetData(initial) { load(app) }
-            GlanceTheme {
-                Row(
-                    modifier = GlanceModifier.fillMaxSize()
-                        .background(GlanceTheme.colors.widgetBackground)
-                        .cornerRadius(20.dp)
-                        .padding(6.dp),
+            Row(
+                modifier = GlanceModifier.fillMaxSize().padding(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Tile(
+                    done = d.bibleDone, bg = SILVER, fg = SILVER_INK,
+                    big = d.bibleNumber, small = d.bibleBook,
+                    onClick = WidgetIntents.openApp(context, Tab.BIBLE.name),
+                )
+                Spacer(GlanceModifier.width(8.dp))
+                Tile(
+                    done = d.studyDone, bg = NAVY, fg = NAVY_INK,
+                    big = d.studyNumber, small = d.studyText,
+                    onClick = WidgetIntents.openApp(context, Tab.STUDY.name),
+                )
+                Spacer(GlanceModifier.width(8.dp))
+                Column(
+                    modifier = GlanceModifier.defaultWeight().fillMaxHeight()
+                        .padding(horizontal = 6.dp)
+                        .clickable(WidgetIntents.openApp(context, Tab.SERVICE.name)),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Cell(
-                        title = "通読", status = if (d.bibleDone) "✓" else "まだ", alert = !d.bibleDone,
-                        detail = d.bibleNext, onClick = WidgetIntents.openApp(context, Tab.BIBLE.name),
-                    )
-                    Spacer(GlanceModifier.width(6.dp))
-                    Cell(
-                        title = "研究", status = if (d.studyDone) "✓" else "まだ", alert = !d.studyDone,
-                        detail = d.studyNext, onClick = WidgetIntents.openApp(context, Tab.STUDY.name),
-                    )
-                    Spacer(GlanceModifier.width(6.dp))
-                    Cell(
-                        title = "奉仕", status = ServiceMath.formatDuration(d.serviceMinutes), alert = false,
-                        detail = "レッスン ${d.lessons}件", onClick = WidgetIntents.openApp(context, Tab.SERVICE.name),
-                    )
+                    T(hm(d.serviceMinutes), 30, WHITE, bold = true)
+                    T("${d.lessons}件", 18, WHITE, bold = true)
                 }
             }
         }
@@ -81,50 +91,82 @@ class DailyWidget : GlanceAppWidget() {
         val ym = YearMonth.from(app.clock.today())
         val timer = WidgetData.timer(app)
         val lessons = app.db.serviceDao().getMonth(ym.toString())?.bibleStudies ?: 0
-        return Data(
-            bibleDone = marks.bible,
-            bibleNext = when {
-                bible == null -> ""
-                bible.allDone -> "読み終えました"
-                else -> "次 " + shortLabel(bible.label)
-            },
-            studyDone = marks.study,
-            studyNext = when {
-                study == null -> "資料を選ぶ"
-                study.allDone -> "終えました"
-                study.countless -> study.material.title
-                else -> "次 " + shortLabel(study.label)
-            },
-            serviceMinutes = timer.monthMinutes,
-            lessons = lessons,
-        )
+        val (bBook, bNum) = when {
+            bible == null -> "" to ""
+            bible.allDone -> "完読" to "✓"
+            else -> splitNumber(bible.label)
+        }
+        val (sText, sNum) = when {
+            study == null -> "資料を選ぶ" to ""
+            study.allDone -> "完了" to "✓"
+            study.countless -> study.material.title to ""
+            else -> splitNumber(shortLabel(study.label))
+        }
+        return Data(marks.bible, bBook, bNum, marks.study, sText, sNum, timer.monthMinutes, lessons)
     }
 
     companion object {
         private val siBook = Regex("""^聖書の\d+番目の書 ― (.+)$""")
+        private val trailingNumber = Regex("""^(.*?)\s*(\d+)章?$""")
 
         /** 1行に収まるよう短くする（「聖書の3番目の書 ― レビ記」→「レビ記」）。 */
         fun shortLabel(label: String): String = siBook.matchEntire(label)?.groupValues?.get(1) ?: label
+
+        /** 「創世記 4章」→（創世記, 4）、「研究 12」→（研究, 12）。番号がなければ（全体, ""）。 */
+        fun splitNumber(label: String): Pair<String, String> =
+            trailingNumber.matchEntire(label)?.let { it.groupValues[1] to it.groupValues[2] } ?: (label to "")
+
+        /** 52時間30分 → "52:30"。 */
+        fun hm(minutes: Long): String = "%d:%02d".format(minutes / 60, minutes % 60)
+
+        private val SILVER = Color(0xFFC9CED6)
+        private val SILVER_INK = Color(0xFF17202B)
+        private val NAVY = Color(0xFF1C2E4A)
+        private val NAVY_INK = Color(0xFFFFFFFF)
+        private val WHITE = Color(0xFFFFFFFF)
     }
 }
 
 @Composable
-private fun RowScope.Cell(title: String, status: String, alert: Boolean, detail: String, onClick: Action) {
-    val bg = if (alert) GlanceTheme.colors.errorContainer else GlanceTheme.colors.secondaryContainer
-    val fg = if (alert) GlanceTheme.colors.onErrorContainer else GlanceTheme.colors.onSecondaryContainer
-    Column(
+private fun T(text: String, size: Int, color: Color, bold: Boolean = false, maxLines: Int = 1) {
+    Text(
+        text, maxLines = maxLines,
+        style = TextStyle(
+            color = ColorProvider(color), fontSize = size.sp,
+            fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
+        ),
+    )
+}
+
+/**
+ * まだ：はっきりした色。済んだ：薄くして右上に ✓。
+ * 番号があれば大きく、名前は上に小さく。番号がなければ名前を大きく。
+ */
+@Composable
+private fun RowScope.Tile(done: Boolean, bg: Color, fg: Color, big: String, small: String, onClick: Action) {
+    val fill = if (done) bg.copy(alpha = 0.28f) else bg
+    val ink = if (done) Color.White.copy(alpha = 0.85f) else fg
+    Box(
         modifier = GlanceModifier.defaultWeight().fillMaxHeight()
-            .background(bg).cornerRadius(14.dp)
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .background(ColorProvider(fill)).cornerRadius(18.dp)
             .clickable(onClick),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            WText(title, size = 12, color = fg)
-            Spacer(GlanceModifier.width(4.dp))
-            WText(status, size = 14, bold = true, color = fg)
+        Column(
+            modifier = GlanceModifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (big.isNotEmpty()) {
+                T(small, 16, ink, bold = true)
+                T(big, 32, ink, bold = true)
+            } else {
+                T(small, 24, ink, bold = true, maxLines = 2)
+            }
         }
-        WText(detail, size = 12, color = fg)
+        if (done) {
+            Box(GlanceModifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.TopEnd) {
+                T("✓", 22, Color.White, bold = true)
+            }
+        }
     }
 }
 
