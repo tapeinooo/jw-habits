@@ -18,7 +18,8 @@ data class HabitEntity(
 )
 
 /** ひな形の種類。null は手で作った資料。 */
-enum class MaterialTemplate { BIBLE_READING, BIBLE_STUDY, BE, WATCHTOWER }
+/** BIBLE_STUDY は 0.5.0 までの「聖書全体（研究用）」（66書×章）。新しく作るのは SI（見出しごとの一覧）。 */
+enum class MaterialTemplate { BIBLE_READING, BIBLE_STUDY, BE, WATCHTOWER, SI }
 
 /** 資料。聖書通読も「1189単位の資料」として持つ。 */
 @Entity(

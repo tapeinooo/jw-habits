@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -223,6 +224,8 @@ fun UnitGrid(
     title: String,
     onBack: () -> Unit,
     menuExtras: @Composable ColumnScope.(close: () -> Unit) -> Unit,
+    /** true なら見出しを1行ずつ並べる（マス目ではなく一覧。なぞって記録はない）。 */
+    rows: Boolean = false,
 ) {
     val unit = state.material?.unitLabel.orEmpty()
     var mode by rememberSaveable { mutableStateOf(GridMode.NORMAL) }
@@ -231,7 +234,11 @@ fun UnitGrid(
 
     Column(Modifier.fillMaxSize()) {
         UnitTopBar(title, "資料の一覧へ", onBack) { close ->
-            ModeMenuItems({ mode = it }, close)
+            if (rows) {
+                DropdownMenuItem(text = { Text("読んだ日を直す") }, onClick = { close(); mode = GridMode.DATE })
+            } else {
+                ModeMenuItems({ mode = it }, close)
+            }
             menuExtras(close)
         }
         Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -254,15 +261,19 @@ fun UnitGrid(
         }
         if (mode != GridMode.NORMAL) ModeBanner(mode, unit) { mode = GridMode.NORMAL }
         Spacer(Modifier.height(8.dp))
-        UnitCells(
-            count = state.total,
-            state = state,
-            mode = mode,
-            vm = vm,
-            indexOf = { it - 1 },
-            onPickDate = { dateTarget = it },
-            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-        )
+        if (rows) {
+            UnitRows(state, mode, vm, onPickDate = { dateTarget = it }, modifier = Modifier.weight(1f))
+        } else {
+            UnitCells(
+                count = state.total,
+                state = state,
+                mode = mode,
+                vm = vm,
+                indexOf = { it - 1 },
+                onPickDate = { dateTarget = it },
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+            )
+        }
     }
 
     dateTarget?.let { index ->
@@ -419,3 +430,58 @@ private fun cellAt(state: LazyGridState, p: Offset): Int? =
 
 fun shortDate(d: LocalDate, today: LocalDate): String =
     if (d.year == today.year) "${d.monthValue}/${d.dayOfMonth}" else "${d.year % 100}/${d.monthValue}/${d.dayOfMonth}"
+
+/**
+ * 見出しの一覧（1行に1つ）。通常：タップで記録／取り消し、長押しでその見出しのページ。日付：タップで日付を選ぶ。
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun UnitRows(
+    state: UnitUiState,
+    mode: GridMode,
+    vm: UnitViewModel,
+    onPickDate: (Int) -> Unit,
+    modifier: Modifier,
+) {
+    val undoer = LocalUndoer.current
+    val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
+    val today = vm.today()
+    val scheme = MaterialTheme.colorScheme
+    androidx.compose.foundation.lazy.LazyColumn(modifier) {
+        items(state.total, key = { it }) { index ->
+            val record = state.read[index]
+            val click = when (mode) {
+                GridMode.DATE -> Modifier.combinedClickable(onClick = { onPickDate(index) })
+                else -> Modifier.combinedClickable(
+                    onClick = { vm.toggle(index, undoer::offer) },
+                    onLongClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        openLink(context, state.linkFor(index))
+                    },
+                )
+            }
+            Row(
+                Modifier.fillMaxWidth().then(click).padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(24.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(if (record != null) scheme.primary else scheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (record != null) Icon(Icons.Filled.Check, null, tint = scheme.onPrimary, modifier = Modifier.size(16.dp))
+                }
+                Text(
+                    state.nameOf(index),
+                    Modifier.weight(1f).padding(start = 12.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (record != null) scheme.onSurfaceVariant else scheme.onSurface,
+                )
+                if (record != null) {
+                    Text(shortDate(record.date, today), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}

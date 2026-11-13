@@ -16,7 +16,8 @@ object StudyTemplates {
     const val WT_DEFAULT_COUNT = 4
     const val BE_COUNT = 53
 
-    fun bibleStudy() = Spec("聖書全体（研究用）", "章", BibleBooks.totalChapters, MaterialTemplate.BIBLE_STUDY)
+    /** 『聖書全体は神の霊感を受けたもので，有益です』。見出しごとに1行。 */
+    fun si() = Spec(SiContents.TITLE, "項", SiContents.count, MaterialTemplate.SI)
 
     fun be() = Spec("『神権宣教学校の教育から益を得る』", "研究", BE_COUNT, MaterialTemplate.BE)
 
@@ -42,6 +43,7 @@ object StudyTemplates {
     /** 単位の表示名。聖書は「創世記 1章」、それ以外は「研究 12」。index は0始まり。 */
     fun unitName(template: MaterialTemplate?, unitLabel: String, index: Int): String = when (template) {
         MaterialTemplate.BIBLE_READING, MaterialTemplate.BIBLE_STUDY -> BibleBooks.chapterAt(index).label
+        MaterialTemplate.SI -> SiContents.heading(index)
         else -> "$unitLabel ${index + 1}"
     }
 
@@ -55,6 +57,7 @@ object StudyTemplates {
     ): String? = recordLink ?: materialLink ?: when (template) {
         MaterialTemplate.BIBLE_READING, MaterialTemplate.BIBLE_STUDY ->
             unitIndex?.takeIf { it in 0 until BibleBooks.totalChapters }?.let { JwLibrary.chapterUrl(BibleBooks.chapterAt(it)) }
+        MaterialTemplate.SI -> unitIndex?.let(SiContents::url)
         MaterialTemplate.BE -> BE_URL
         MaterialTemplate.WATCHTOWER -> parseIssue(issue)?.let { (y, m) ->
             "https://www.jw.org/finder?wtlocale=J&pub=w&issue=%04d%02d".format(y, m)

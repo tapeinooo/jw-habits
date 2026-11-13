@@ -116,7 +116,7 @@ private fun StudyHome(vm: StudyViewModel, onOpen: (Long) -> Unit) {
     when (step) {
         AddStep.PICK -> AddMaterialDialog(
             onDismiss = { step = null },
-            onBibleStudy = { step = null; vm.create(app.jwhabits.domain.StudyTemplates.bibleStudy()) },
+            onBibleStudy = { step = null; vm.create(app.jwhabits.domain.StudyTemplates.si()) },
             onBe = { step = null; vm.create(app.jwhabits.domain.StudyTemplates.be()) },
             onWatchtower = { step = AddStep.WATCHTOWER },
             onManual = { step = AddStep.MANUAL },

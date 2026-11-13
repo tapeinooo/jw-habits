@@ -49,8 +49,8 @@ class StudyLogicTest {
         assertEquals(4, wt.unitCount); assertEquals("記事", wt.unitLabel); assertEquals("2026-11", wt.issue)
         val be = StudyTemplates.be()
         assertEquals(53, be.unitCount); assertEquals("研究", be.unitLabel); assertEquals(MaterialTemplate.BE, be.template)
-        val bible = StudyTemplates.bibleStudy()
-        assertEquals(1189, bible.unitCount); assertEquals("章", bible.unitLabel)
+        val si = StudyTemplates.si()
+        assertEquals(78, si.unitCount); assertEquals(MaterialTemplate.SI, si.template)
         val manual = StudyTemplates.manual("x")
         assertNull(manual.unitCount); assertEquals("章", manual.unitLabel); assertNull(manual.template)
     }
@@ -65,5 +65,17 @@ class StudyLogicTest {
             StudyTemplates.linkFor(MaterialTemplate.BIBLE_STUDY, null, null, 
                 app.jwhabits.domain.BibleBooks.book(43).indexOf(3), null))
         assertNull(StudyTemplates.linkFor(null, null, null, 0, null))
+    }
+
+    @Test fun siHeadingsAndLinks() {
+        assertEquals(78, app.jwhabits.domain.SiContents.count)
+        assertEquals("聖書の1番目の書 ― 創世記", StudyTemplates.unitName(MaterialTemplate.SI, "項", 1))
+        assertEquals("聖書の66番目の書 ― ヨハネへの啓示", StudyTemplates.unitName(MaterialTemplate.SI, "項", 66))
+        assertEquals("研究10 ― 聖書 ― 信ぴょう性のある，真実の書", StudyTemplates.unitName(MaterialTemplate.SI, "項", 76))
+        assertEquals("霊感を受けた聖書はとこしえの益をもたらす", StudyTemplates.unitName(MaterialTemplate.SI, "項", 77))
+        // wol の目次ページと同じ文書番号（創世記 = 1101990062、研究1 = 1101990128、結び = 1101990138）
+        assertEquals("https://wol.jw.org/ja/wol/d/r7/lp-j/1101990062", StudyTemplates.linkFor(MaterialTemplate.SI, null, null, 1, null))
+        assertEquals("https://wol.jw.org/ja/wol/d/r7/lp-j/1101990128", StudyTemplates.linkFor(MaterialTemplate.SI, null, null, 67, null))
+        assertEquals("https://wol.jw.org/ja/wol/d/r7/lp-j/1101990138", StudyTemplates.linkFor(MaterialTemplate.SI, null, null, 77, null))
     }
 }

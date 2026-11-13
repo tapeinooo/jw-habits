@@ -37,7 +37,7 @@ fun AddMaterialDialog(
         title = { Text("資料を追加") },
         text = {
             Column {
-                TextButton(onClick = onBibleStudy, modifier = Modifier.fillMaxWidth()) { Text("聖書全体（研究用）") }
+                TextButton(onClick = onBibleStudy, modifier = Modifier.fillMaxWidth()) { Text(app.jwhabits.domain.SiContents.TITLE) }
                 TextButton(onClick = onBe, modifier = Modifier.fillMaxWidth()) { Text("『神権宣教学校の教育から益を得る』") }
                 TextButton(onClick = onWatchtower, modifier = Modifier.fillMaxWidth()) { Text("ものみの塔（研究用）") }
                 TextButton(onClick = onManual, modifier = Modifier.fillMaxWidth()) { Text("手で作る") }
@@ -103,7 +103,7 @@ fun ManualMaterialDialog(
 /** 名前・数を変える。聖書全体は数を変えられない。数のある資料を「記録だけ」には戻せない。 */
 @Composable
 fun EditMaterialDialog(material: MaterialEntity, onDismiss: () -> Unit, onSave: (MaterialEntity) -> Unit) {
-    val isBible = material.template == MaterialTemplate.BIBLE_STUDY
+    val isBible = material.template == MaterialTemplate.BIBLE_STUDY || material.template == MaterialTemplate.SI
     val manual = material.template == null
     var title by remember { mutableStateOf(material.title) }
     var label by remember { mutableStateOf(material.unitLabel) }

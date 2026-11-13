@@ -87,6 +87,7 @@ fun MaterialScreen(materialId: Long, study: StudyViewModel, onBack: () -> Unit) 
     when {
         material.template == MaterialTemplate.BIBLE_STUDY -> BibleUnits(state, vm, material.title, onBack, extras)
         state.countless -> CountlessLog(state, vm, material.title, onBack, extras)
+        material.template == MaterialTemplate.SI -> UnitGrid(state, vm, material.title, onBack, extras, rows = true)
         else -> UnitGrid(state, vm, material.title, onBack, extras)
     }
 

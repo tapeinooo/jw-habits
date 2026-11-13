@@ -182,6 +182,22 @@ private fun LazyGridScope.unitPicker(
             style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp),
         )
     }
+    if (material.template == MaterialTemplate.SI) {
+        // 見出しの一覧から1つ選ぶ
+        items(count, key = { "si-$it" }, span = { GridItemSpan(maxLineSpan) }) { index ->
+            val on = selected == index
+            val scheme = MaterialTheme.colorScheme
+            Text(
+                app.jwhabits.domain.SiContents.heading(index),
+                color = if (on) scheme.onPrimary else scheme.onSurface,
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                    .background(if (on) scheme.primary else scheme.surfaceVariant)
+                    .clickable { onUnit(if (on) null else index) }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            )
+        }
+        return
+    }
     val base: Int
     val cells: Int
     if (isBible) {
