@@ -42,5 +42,46 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/today_widget_info" />
         </receiver>
+
+        <receiver
+            android:name=".widget.NextChapterWidgetReceiver"
+            android:exported="true"
+            android:label="次の章">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/next_chapter_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.StudyWidgetReceiver"
+            android:exported="true"
+            android:label="研究">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/study_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.TimerWidgetReceiver"
+            android:exported="true"
+            android:label="奉仕タイマー">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/timer_widget_info" />
+        </receiver>
+
+        <!-- 日付が切り替わる時刻にウィジェットを更新する -->
+        <receiver
+            android:name=".widget.DayRolloverReceiver"
+            android:exported="false" />
     </application>
 </manifest>

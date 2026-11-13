@@ -15,7 +15,7 @@ import app.jwhabits.domain.ReadingProgress
 import app.jwhabits.domain.StudyTemplates
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -32,6 +32,7 @@ data class UnitUiState(
     val log: List<UnitRecordEntity> = emptyList(),
     val nextIndex: Int? = null,
     val todayCount: Int = 0,
+    val today: LocalDate = LocalDate.now(),
 ) {
     val countless: Boolean get() = material != null && material.unitCount == null
     val readCount: Int get() = read.keys.count { it < total }
@@ -50,8 +51,7 @@ typealias OfferUndo = (String, suspend () -> Unit) -> Unit
 
 class UnitViewModel(private val repo: UnitRepository) : ViewModel() {
 
-    val state: StateFlow<UnitUiState> = repo.snapshot.map { s ->
-        val today = repo.today()
+    val state: StateFlow<UnitUiState> = combine(repo.snapshot, repo.todayFlow) { s, today ->
         val total = s.material.unitCount ?: 0
         UnitUiState(
             loaded = true,
@@ -62,6 +62,7 @@ class UnitViewModel(private val repo: UnitRepository) : ViewModel() {
             log = if (s.material.unitCount == null) s.records.sortedWith(compareByDescending<UnitRecordEntity> { it.date }.thenByDescending { it.unitIndex }) else emptyList(),
             nextIndex = ReadingProgress.nextUnread(s.records.map { ReadMark(it.id, it.unitIndex) }, total),
             todayCount = s.records.count { it.date == today },
+            today = today,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UnitUiState())
 

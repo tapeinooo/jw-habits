@@ -26,6 +26,8 @@ class UnitRepository(
 
     fun today(): LocalDate = clock.today()
 
+    val todayFlow: Flow<LocalDate> = clock.todayFlow
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val snapshot: Flow<ReadingSnapshot> =
         materials.observe(materialId).filterNotNull().flatMapLatest { m ->

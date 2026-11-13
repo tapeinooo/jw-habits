@@ -60,12 +60,13 @@ fun formatElapsed(ms: Long): String {
  * 初めての開始で通知の許可を頼む（断られてもタイマーは動く）。
  */
 @Composable
-fun TimerButton(vm: ServiceViewModel, modifier: Modifier = Modifier) {
+fun TimerButton(vm: ServiceViewModel, modifier: Modifier = Modifier, compact: Boolean = false) {
     val running by vm.running.collectAsStateWithLifecycle()
     val now by vm.nowTicker.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.startTimer() }
     val r = running
+    val size = if (compact) Modifier.height(44.dp) else Modifier.fillMaxWidth().height(56.dp)
     if (r == null) {
         Button(
             onClick = {
@@ -73,10 +74,10 @@ fun TimerButton(vm: ServiceViewModel, modifier: Modifier = Modifier) {
                     ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
                 if (needs) launcher.launch(Manifest.permission.POST_NOTIFICATIONS) else vm.startTimer()
             },
-            modifier = modifier.fillMaxWidth().height(56.dp),
+            modifier = modifier.then(size),
         ) { Text("開始", style = MaterialTheme.typography.titleMedium) }
     } else {
-        Button(onClick = { vm.stopTimer() }, modifier = modifier.fillMaxWidth().height(56.dp)) {
+        Button(onClick = { vm.stopTimer() }, modifier = modifier.then(size)) {
             Text("終了  ${formatElapsed(now - (r.startEpochMs ?: now))}", style = MaterialTheme.typography.titleMedium)
         }
     }

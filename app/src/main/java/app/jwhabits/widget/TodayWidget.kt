@@ -1,38 +1,35 @@
 package app.jwhabits.widget
 
 import android.content.Context
-import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
-import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.padding
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
-import app.jwhabits.MainActivity
 
-/** 「今日」ウィジェット（小）。今は骨組みだけ。タップでアプリを開く。 */
+/** 「今日」ウィジェット（2×1）。通読・研究・奉仕を、今日済んでいれば ✓、まだなら ・。タップでアプリを開く。 */
 class TodayWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val app = WidgetData.app(context)
+        val initial = WidgetData.todayMarks(app)
         provideContent {
-            GlanceTheme {
-                Column(
-                    modifier = GlanceModifier.fillMaxSize()
-                        .background(GlanceTheme.colors.widgetBackground)
-                        .padding(12.dp)
-                        .clickable(actionStartActivity<MainActivity>()),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text("今日", style = TextStyle(color = GlanceTheme.colors.onSurface))
+            val marks = rememberWidgetData(initial) { WidgetData.todayMarks(app) }
+            WidgetFrame(GlanceModifier.clickable(WidgetIntents.openApp(context))) {
+                listOf("通読" to marks.bible, "研究" to marks.study, "奉仕" to marks.service).forEach { (label, done) ->
+                    Column(
+                        modifier = GlanceModifier.defaultWeight(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        WText(label, size = 12, muted = true)
+                        WText(
+                            if (done) "✓" else "・", size = 24, bold = true,
+                            color = if (done) GlanceTheme.colors.primary else GlanceTheme.colors.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }

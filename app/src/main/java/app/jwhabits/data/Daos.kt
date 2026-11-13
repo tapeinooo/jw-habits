@@ -46,6 +46,13 @@ interface UnitRecordDao {
     @Query("SELECT COUNT(*) FROM unit_record WHERE materialId = :materialId AND date = :date")
     fun observeCountOn(materialId: Long, date: LocalDate): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM unit_record WHERE materialId = :materialId AND date = :date")
+    suspend fun getCountOn(materialId: Long, date: LocalDate): Int
+
+    /** 資料の記録がある日（どの周でも）。カレンダーと連続日数用。 */
+    @Query("SELECT DISTINCT date FROM unit_record WHERE materialId = :materialId")
+    fun observeDates(materialId: Long): Flow<List<LocalDate>>
+
     @Query("SELECT * FROM unit_record WHERE id = :id")
     suspend fun getById(id: Long): UnitRecordEntity?
 
@@ -92,12 +99,21 @@ interface DayRecordDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM day_record WHERE habitId = :habitId AND date = :date)")
     fun observeExists(habitId: Long, date: LocalDate): Flow<Boolean>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM day_record WHERE habitId = :habitId AND date = :date)")
+    suspend fun exists(habitId: Long, date: LocalDate): Boolean
+
+    @Query("SELECT date FROM day_record WHERE habitId = :habitId")
+    fun observeDates(habitId: Long): Flow<List<LocalDate>>
 }
 
 @Dao
 interface ServiceDao {
     @Query("SELECT * FROM service_record WHERE date BETWEEN :from AND :to ORDER BY date DESC, COALESCE(startEpochMs, 0) DESC, id DESC")
     fun observeRange(from: LocalDate, to: LocalDate): Flow<List<ServiceRecordEntity>>
+
+    @Query("SELECT * FROM service_record WHERE date BETWEEN :from AND :to")
+    suspend fun getRange(from: LocalDate, to: LocalDate): List<ServiceRecordEntity>
 
     @Query("SELECT * FROM service_record WHERE startEpochMs IS NOT NULL AND endEpochMs IS NULL AND minutes IS NULL LIMIT 1")
     fun observeRunning(): Flow<ServiceRecordEntity?>

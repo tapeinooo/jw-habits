@@ -18,6 +18,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -61,8 +62,17 @@ class Undoer(private val host: SnackbarHostState, private val scope: CoroutineSc
 val LocalUndoer = staticCompositionLocalOf<Undoer> { error("Undoer not provided") }
 
 @Composable
-fun AppRoot(pendingShare: MutableState<SharedPayload?> = remember { mutableStateOf(null) }) {
+fun AppRoot(
+    pendingShare: MutableState<SharedPayload?> = remember { mutableStateOf(null) },
+    pendingTab: MutableState<Tab?> = remember { mutableStateOf(null) },
+) {
     var tab by rememberSaveable { mutableStateOf(Tab.TODAY) }
+    pendingTab.value?.let { requested ->
+        LaunchedEffect(requested) {
+            tab = requested
+            pendingTab.value = null
+        }
+    }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val undoer = remember { Undoer(snackbar, scope) }

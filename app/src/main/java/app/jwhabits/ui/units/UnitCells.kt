@@ -311,7 +311,7 @@ fun UnitCells(
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
     val gridState = rememberLazyGridState()
-    val today = vm.today()
+    val today = state.today
 
     // なぞっている範囲（マスの番号 1始まり）
     var dragStart by remember { mutableStateOf<Int?>(null) }

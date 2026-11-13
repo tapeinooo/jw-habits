@@ -11,6 +11,8 @@ class ServiceRepository(db: AppDatabase, private val clock: DayClock) {
 
     fun today(): LocalDate = clock.today()
 
+    val todayFlow: Flow<LocalDate> = clock.todayFlow
+
     val running: Flow<ServiceRecordEntity?> = dao.observeRunning()
 
     fun records(from: LocalDate, to: LocalDate): Flow<List<ServiceRecordEntity>> = dao.observeRange(from, to)

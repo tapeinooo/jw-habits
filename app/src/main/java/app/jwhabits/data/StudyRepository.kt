@@ -2,7 +2,9 @@ package app.jwhabits.data
 
 import app.jwhabits.domain.DayClock
 import app.jwhabits.domain.StudyTemplates
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
 import java.time.LocalDate
 
 /** 個人研究の資料の一覧・追加・変更と、「今日研究した」。単位の記録は UnitRepository。 */
@@ -16,7 +18,8 @@ class StudyRepository(db: AppDatabase, private val clock: DayClock, private val 
 
     val activeMaterials: Flow<List<MaterialEntity>> = materials.observeByHabit(habit)
     val counts: Flow<List<MaterialCount>> = units.observeCurrentCounts(habit)
-    fun studiedToday(): Flow<Boolean> = days.observeExists(habit, today())
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun studiedToday(): Flow<Boolean> = clock.todayFlow.flatMapLatest { days.observeExists(habit, it) }
 
     /** 「今日研究した」を付ける／外す。 */
     suspend fun toggleToday(): UnitRepository.Undo {

@@ -20,7 +20,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -71,11 +73,11 @@ class ServiceViewModel(
         val monthRecords = repo.records(ym.atDay(1), ym.atEndOfMonth())
         val yearRange = ServiceMath.serviceYearRange(ym.atDay(1))
         val yearRecords = repo.records(yearRange.start, yearRange.endInclusive)
-        val base = combine(monthRecords, yearRecords, repo.month(ym), now) { m, y, row, nowMs ->
+        val base = combine(monthRecords, yearRecords, repo.month(ym), now, repo.todayFlow) { m, y, row, nowMs, today ->
             val auxMonth = row?.role == ServiceRole.AUXILIARY_PIONEER
             ServiceState(
                 month = ym,
-                isCurrentMonth = ym == YearMonth.from(repo.today()),
+                isCurrentMonth = ym == YearMonth.from(today),
                 records = m,
                 nowMs = nowMs,
                 auxiliaryThisMonth = auxMonth,
@@ -94,10 +96,12 @@ class ServiceViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ServiceState(month.value, true))
 
     /** 今月（今日の画面用）の合計。表示中の月とは別に持つ。 */
-    val currentMonthMinutes: StateFlow<Long> = run {
-        val ym = YearMonth.from(repo.today())
-        combine(repo.records(ym.atDay(1), ym.atEndOfMonth()), now) { r, n -> ServiceMath.totalMinutes(r, n) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0L)
+    val currentMonthMinutes: StateFlow<Long> = repo.todayFlow
+        .map { YearMonth.from(it) }
+        .distinctUntilChanged()
+        .flatMapLatest { ym ->
+            combine(repo.records(ym.atDay(1), ym.atEndOfMonth()), now) { r, n -> ServiceMath.totalMinutes(r, n) }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0L)
 
     val nowTicker: StateFlow<Long> = now.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), System.currentTimeMillis())
 
