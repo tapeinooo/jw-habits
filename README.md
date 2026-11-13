@@ -12,3 +12,18 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 `local.properties` に `sdk.dir` を書く（Homebrew の場合 `/opt/homebrew/share/android-commandlinetools`）。
+
+## インストール（スマホ）
+
+GitHub にログインしたブラウザで開くと、いつも最新版の APK が落ちてくる:
+https://github.com/tapeinooo/jw-habits/releases/latest/download/jw-habits.apk
+
+## リリース
+
+`app/build.gradle.kts` の versionCode / versionName を上げてコミットしてから:
+
+```sh
+scripts/release.sh 0.4.0 "変更の説明"
+```
+
+署名はこの Mac の debug 鍵。別の鍵で作った APK は上書きインストールできない。
