@@ -3,7 +3,8 @@ package app.jwhabits.domain
 /**
  * 『聖書全体は神の霊感を受けたもので，有益です』の見出し（目次の本文部分）。
  * 出典: https://wol.jw.org/ja/wol/lv/r7/lp-j/0/55098 （見返し・タイトルページ・目次は除く）
- * wol の文書番号は見出しの順に 1101990061 から連番。
+ * 文書番号（docid）は見出しの順に 1101990061 から連番。
+ * リンクは JW Library の「共有」と同じ形（jw.org/finder）。JW Library が入っていればアプリで開く。
  */
 object SiContents {
     const val TITLE = "『聖書全体は神の霊感を受けたもので，有益です』"
@@ -41,6 +42,9 @@ object SiContents {
 
     fun heading(index: Int): String = headings.getOrElse(index) { "項 ${index + 1}" }
 
+    /** 目次（本全体）。 */
+    const val TOC_URL = "https://www.jw.org/finder?srcid=jwlshare&wtlocale=J&prefer=lang&pub=si"
+
     fun url(index: Int): String? =
-        if (index in headings.indices) "https://wol.jw.org/ja/wol/d/r7/lp-j/${FIRST_DOC_ID + index}" else null
+        if (index in headings.indices) "https://www.jw.org/finder?srcid=jwlshare&wtlocale=J&prefer=lang&docid=${FIRST_DOC_ID + index}" else null
 }

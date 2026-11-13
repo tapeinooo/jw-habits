@@ -73,9 +73,10 @@ class StudyLogicTest {
         assertEquals("聖書の66番目の書 ― ヨハネへの啓示", StudyTemplates.unitName(MaterialTemplate.SI, "項", 66))
         assertEquals("研究10 ― 聖書 ― 信ぴょう性のある，真実の書", StudyTemplates.unitName(MaterialTemplate.SI, "項", 76))
         assertEquals("霊感を受けた聖書はとこしえの益をもたらす", StudyTemplates.unitName(MaterialTemplate.SI, "項", 77))
-        // wol の目次ページと同じ文書番号（創世記 = 1101990062、研究1 = 1101990128、結び = 1101990138）
-        assertEquals("https://wol.jw.org/ja/wol/d/r7/lp-j/1101990062", StudyTemplates.linkFor(MaterialTemplate.SI, null, null, 1, null))
-        assertEquals("https://wol.jw.org/ja/wol/d/r7/lp-j/1101990128", StudyTemplates.linkFor(MaterialTemplate.SI, null, null, 67, null))
-        assertEquals("https://wol.jw.org/ja/wol/d/r7/lp-j/1101990138", StudyTemplates.linkFor(MaterialTemplate.SI, null, null, 77, null))
+        assertEquals(app.jwhabits.domain.SiContents.TOC_URL, StudyTemplates.linkFor(MaterialTemplate.SI, null, null, null, null))
+        // JW Library の共有リンクと同じ文書番号（創世記 = 1101990062、研究1 = 1101990128、結び = 1101990138）
+        assertEquals("https://www.jw.org/finder?srcid=jwlshare&wtlocale=J&prefer=lang&docid=1101990062", StudyTemplates.linkFor(MaterialTemplate.SI, null, null, 1, null))
+        assertEquals("https://www.jw.org/finder?srcid=jwlshare&wtlocale=J&prefer=lang&docid=1101990128", StudyTemplates.linkFor(MaterialTemplate.SI, null, null, 67, null))
+        assertEquals("https://www.jw.org/finder?srcid=jwlshare&wtlocale=J&prefer=lang&docid=1101990138", StudyTemplates.linkFor(MaterialTemplate.SI, null, null, 77, null))
     }
 }

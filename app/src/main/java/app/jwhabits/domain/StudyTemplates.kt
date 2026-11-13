@@ -57,7 +57,7 @@ object StudyTemplates {
     ): String? = recordLink ?: materialLink ?: when (template) {
         MaterialTemplate.BIBLE_READING, MaterialTemplate.BIBLE_STUDY ->
             unitIndex?.takeIf { it in 0 until BibleBooks.totalChapters }?.let { JwLibrary.chapterUrl(BibleBooks.chapterAt(it)) }
-        MaterialTemplate.SI -> unitIndex?.let(SiContents::url)
+        MaterialTemplate.SI -> unitIndex?.let(SiContents::url) ?: SiContents.TOC_URL
         MaterialTemplate.BE -> BE_URL
         MaterialTemplate.WATCHTOWER -> parseIssue(issue)?.let { (y, m) ->
             "https://www.jw.org/finder?wtlocale=J&pub=w&issue=%04d%02d".format(y, m)
