@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- テーマアイコン用（1色）。本の形と、題字の線を抜いたもの。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M36,26 L71,26 Q74,26 74,29 L74,75 Q74,78 71,78 L36,78 Q33,78 33,75 L33,29 Q33,26 36,26 Z M49,42 L64,42 L64,44.5 L49,44.5 Z M51,48 L62,48 L62,50 L51,50 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M62,78 L68,78 L68,89 L65,86 L62,89 Z" />
+</vector>
