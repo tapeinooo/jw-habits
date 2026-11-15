@@ -48,40 +48,19 @@ import app.jwhabits.data.ServiceRecordEntity
 import app.jwhabits.data.ServiceRole
 import app.jwhabits.domain.ServiceMath
 import app.jwhabits.ui.LocalUndoer
-
-/** 経過時間 "1:05:09"。 */
-fun formatElapsed(ms: Long): String {
-    val s = maxOf(0L, ms) / 1000
-    return "%d:%02d:%02d".format(s / 3600, s % 3600 / 60, s % 60)
-}
-
-/**
- * 「開始」「終了」のボタン（奉仕タブと今日の画面で共通）。動いている間は経過時間を出す。
- * 初めての開始で通知の許可を頼む（断られてもタイマーは動く）。
- */
-@Composable
-fun TimerButton(vm: ServiceViewModel, modifier: Modifier = Modifier, compact: Boolean = false) {
-    val running by vm.running.collectAsStateWithLifecycle()
-    val now by vm.nowTicker.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.startTimer() }
-    val r = running
-    val size = if (compact) Modifier.height(44.dp) else Modifier.fillMaxWidth().height(56.dp)
-    if (r == null) {
-        Button(
-            onClick = {
-                val needs = Build.VERSION.SDK_INT >= 33 &&
-                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-                if (needs) launcher.launch(Manifest.permission.POST_NOTIFICATIONS) else vm.startTimer()
-            },
-            modifier = modifier.then(size),
-        ) { Text("開始", style = MaterialTheme.typography.titleMedium) }
-    } else {
-        Button(onClick = { vm.stopTimer() }, modifier = modifier.then(size)) {
-            Text("終了  ${formatElapsed(now - (r.startEpochMs ?: now))}", style = MaterialTheme.typography.titleMedium)
-        }
-    }
-}
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.ui.text.font.FontWeight
+import app.jwhabits.domain.CalendarMath
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun ServiceScreen(vm: ServiceViewModel = viewModel(factory = ServiceViewModel.Factory)) {
@@ -92,9 +71,9 @@ fun ServiceScreen(vm: ServiceViewModel = viewModel(factory = ServiceViewModel.Fa
     val annual by vm.annualGoal.collectAsStateWithLifecycle()
     val monthly by vm.monthlyGoal.collectAsStateWithLifecycle()
     val cutoff by vm.cutoffHour.collectAsStateWithLifecycle()
-    var manual by remember { mutableStateOf(false) }
+    var selectedDay by remember { mutableStateOf<LocalDate?>(null) }
+    val dayTotals = remember(s.records, s.nowMs) { ServiceMath.dayTotals(s.records, s.nowMs) }
     var settings by remember { mutableStateOf(false) }
-    var editing by remember { mutableStateOf<ServiceRecordEntity?>(null) }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -119,20 +98,10 @@ fun ServiceScreen(vm: ServiceViewModel = viewModel(factory = ServiceViewModel.Fa
         }
         item { SummaryCard(s) }
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TimerButton(vm)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        listOf(15 to "+15分", 30 to "+30分", 60 to "+1時間").forEach { (min, label) ->
-                            OutlinedButton(
-                                onClick = { vm.quickAdd(min, label.removePrefix("+"), undoer::offer) },
-                                modifier = Modifier.weight(1f),
-                            ) { Text(label, maxLines = 1) }
-                        }
-                    }
-                    OutlinedButton(onClick = { manual = true }, modifier = Modifier.fillMaxWidth()) { Text("手で入れる") }
-                }
-            }
+            ServiceCalendar(
+                month = s.month, today = vm.today(), totals = dayTotals,
+                onDay = { selectedDay = it },
+            )
         }
         item {
             Card(Modifier.fillMaxWidth()) {
@@ -163,22 +132,16 @@ fun ServiceScreen(vm: ServiceViewModel = viewModel(factory = ServiceViewModel.Fa
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("報告をコピー") }
         }
-        item { Text("記録", style = MaterialTheme.typography.titleMedium) }
-        if (s.records.isEmpty()) {
-            item { Text("この月の記録はまだありません。", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        }
-        items(s.records, key = { it.id }) { r -> RecordRow(r, s.nowMs, onClick = { editing = r }) }
     }
 
-    if (manual) ManualAddDialog(
-        initialDate = vm.today(), onDismiss = { manual = false },
-        onAdd = { date, min -> manual = false; vm.addManual(date, min, undoer::offer) },
-    )
-    editing?.let { r ->
-        EditRecordDialog(
-            r, onDismiss = { editing = null },
-            onSave = { editing = null; vm.save(it) },
-            onDelete = { editing = null; vm.delete(r, undoer::offer) },
+    selectedDay?.let { day ->
+        DaySheet(
+            date = day,
+            records = s.records.filter { it.date == day },
+            nowMs = s.nowMs,
+            onAdjust = { vm.adjustDay(day, it) },
+            onDelete = { r -> vm.delete(r, undoer::offer) },
+            onDismiss = { selectedDay = null },
         )
     }
     if (settings) ServiceSettingsDialog(
@@ -221,23 +184,117 @@ private fun SummaryCard(s: ServiceState) {
     }
 }
 
+private val dayTitleFormat = DateTimeFormatter.ofPattern("M月d日（E）", Locale.JAPANESE)
+
 @Composable
-private fun RecordRow(r: ServiceRecordEntity, nowMs: Long, onClick: () -> Unit) {
-    val what = if (r.minutes != null) "${r.minutes}分" else {
-        val start = r.startEpochMs?.let(::formatTime) ?: ""
-        "$start〜" + (r.endEpochMs?.let(::formatTime) ?: "")
-    }
-    Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("${r.date.monthValue}/${r.date.dayOfMonth}", style = MaterialTheme.typography.titleSmall)
-                Text(what, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun ServiceCalendar(month: YearMonth, today: LocalDate, totals: Map<LocalDate, Long>, onDay: (LocalDate) -> Unit) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth()) {
+                CalendarMath.weekdayLabels.forEach {
+                    Text(
+                        it, modifier = Modifier.weight(1f), textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-            Text(
-                if (r.minutes == null && r.endEpochMs == null) "動作中 " + ServiceMath.formatDuration(ServiceMath.durationMinutes(r, nowMs))
-                else ServiceMath.formatDuration(ServiceMath.durationMinutes(r, nowMs)),
-                style = MaterialTheme.typography.titleMedium,
-            )
+            CalendarMath.weeks(month).forEach { week ->
+                Row(Modifier.fillMaxWidth()) {
+                    week.forEach { date ->
+                        Box(Modifier.weight(1f).height(54.dp), contentAlignment = Alignment.Center) {
+                            if (date != null) {
+                                val isToday = date == today
+                                val enabled = !date.isAfter(today)
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.clickable(enabled = enabled) { onDay(date) }.padding(2.dp),
+                                ) {
+                                    Box(
+                                        Modifier.size(28.dp).then(
+                                            if (isToday) Modifier.background(MaterialTheme.colorScheme.primaryContainer, CircleShape) else Modifier,
+                                        ),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            "${date.dayOfMonth}", style = MaterialTheme.typography.bodyMedium,
+                                            color = when {
+                                                !enabled -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                                isToday -> MaterialTheme.colorScheme.onPrimaryContainer
+                                                else -> MaterialTheme.colorScheme.onSurface
+                                            },
+                                        )
+                                    }
+                                    val t = totals[date]
+                                    Text(
+                                        if (t != null) ServiceMath.formatCompact(t) else " ",
+                                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary, maxLines = 1,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DaySheet(
+    date: LocalDate,
+    records: List<ServiceRecordEntity>,
+    nowMs: Long,
+    onAdjust: (Int) -> Unit,
+    onDelete: (ServiceRecordEntity) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val total = ServiceMath.totalMinutes(records, nowMs)
+    val adjustable = records.filter { it.minutes != null && it.startEpochMs == null && it.endEpochMs == null }
+        .maxByOrNull { it.id }
+    val others = records.filter { it.id != adjustable?.id }
+    val steps = listOf(60 to "1時間", 30 to "30分", 15 to "15分", 5 to "5分")
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(date.format(dayTitleFormat), style = MaterialTheme.typography.titleMedium)
+            Text(ServiceMath.formatDuration(total), style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                steps.forEach { (m, label) ->
+                    Button(onClick = { onAdjust(m) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                        Text("+$label", maxLines = 1)
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                steps.forEach { (m, label) ->
+                    OutlinedButton(
+                        onClick = { onAdjust(-m) }, enabled = (adjustable?.minutes ?: 0) > 0,
+                        modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 4.dp),
+                    ) { Text("−$label", maxLines = 1) }
+                }
+            }
+            if (others.isNotEmpty()) {
+                Column(Modifier.fillMaxWidth()) {
+                    Text("ほかの記録", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    others.forEach { r ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            val what = if (r.minutes != null) "手入力" else
+                                (r.startEpochMs?.let(::formatTime) ?: "") + "〜" + (r.endEpochMs?.let(::formatTime) ?: "")
+                            Text(
+                                "$what  ${ServiceMath.formatDuration(ServiceMath.durationMinutes(r, nowMs))}",
+                                style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f),
+                            )
+                            IconButton(onClick = { onDelete(r) }) { Icon(Icons.Filled.Delete, contentDescription = "削除") }
+                        }
+                    }
+                }
+            }
+            TextButton(onClick = onDismiss) { Text("閉じる") }
         }
     }
 }

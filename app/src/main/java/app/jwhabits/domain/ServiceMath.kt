@@ -65,4 +65,20 @@ object ServiceMath {
         if (bibleStudies > 0) parts += "研究${bibleStudies}件"
         return "$m " + parts.joinToString("・")
     }
+
+    /** 日ごとの加算後の分数。現在が無ければ0とみなし、0未満にはしない（0なら記録を消す）。 */
+    fun applyDelta(currentMinutes: Int?, deltaMinutes: Int): Int =
+        maxOf(0, (currentMinutes ?: 0) + deltaMinutes)
+
+    /** 日付 → その日の合計分。0分の日は含めない。 */
+    fun dayTotals(records: List<ServiceRecordEntity>, nowMs: Long): Map<LocalDate, Long> =
+        records.groupBy { it.date }
+            .mapValues { (_, rs) -> totalMinutes(rs, nowMs) }
+            .filterValues { it > 0 }
+
+    /** カレンダー用の「2:30」。 */
+    fun formatCompact(minutes: Long): String {
+        val m = maxOf(0L, minutes)
+        return "%d:%02d".format(m / 60, m % 60)
+    }
 }

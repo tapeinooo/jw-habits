@@ -78,4 +78,24 @@ class ServiceMathTest {
         assertEquals("52時間", ServiceMath.formatDuration(52 * 60))
         assertEquals("45分", ServiceMath.formatDuration(45))
     }
+
+    @Test fun applyDeltaClampsAtZero() {
+        assertEquals(0, ServiceMath.applyDelta(30, -45))
+        assertEquals(45, ServiceMath.applyDelta(30, 15))
+        assertEquals(0, ServiceMath.applyDelta(null, -15))
+        assertEquals(60, ServiceMath.applyDelta(null, 60))
+    }
+
+    @Test fun dayTotalsGroupByDate() {
+        val d2 = d.plusDays(1)
+        val recs = listOf(
+            ServiceRecordEntity(date = d, minutes = 30),
+            ServiceRecordEntity(date = d, startEpochMs = 600 * 60_000L, endEpochMs = 750 * 60_000L),
+            ServiceRecordEntity(date = d2, minutes = 45),
+            ServiceRecordEntity(date = d2.plusDays(1), minutes = 0),
+        )
+        assertEquals(mapOf(d to 180L, d2 to 45L), ServiceMath.dayTotals(recs, 0))
+        assertEquals("2:30", ServiceMath.formatCompact(150))
+        assertEquals("0:05", ServiceMath.formatCompact(5))
+    }
 }

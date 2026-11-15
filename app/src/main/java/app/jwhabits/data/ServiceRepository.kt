@@ -1,6 +1,7 @@
 package app.jwhabits.data
 
 import app.jwhabits.domain.DayClock
+import app.jwhabits.domain.ServiceMath
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.YearMonth
@@ -36,6 +37,23 @@ class ServiceRepository(db: AppDatabase, private val clock: DayClock) {
 
     suspend fun addMinutes(date: LocalDate, minutes: Int): Long =
         dao.insert(ServiceRecordEntity(date = date, minutes = minutes))
+
+    /**
+     * その日の「手で入れた」記録（分数だけの記録。複数なら一番新しいもの）に deltaMinutes を足す。
+     * 0になれば記録を消す。記録が無くて減らす場合は何もしない。
+     */
+    suspend fun adjustDay(date: LocalDate, deltaMinutes: Int) {
+        val manual = dao.getRange(date, date)
+            .filter { it.minutes != null && it.startEpochMs == null && it.endEpochMs == null }
+            .maxByOrNull { it.id }
+        if (manual == null && deltaMinutes <= 0) return
+        val next = ServiceMath.applyDelta(manual?.minutes, deltaMinutes)
+        when {
+            manual == null -> dao.insert(ServiceRecordEntity(date = date, minutes = next))
+            next == 0 -> dao.delete(manual.id)
+            else -> dao.update(manual.copy(minutes = next))
+        }
+    }
 
     suspend fun update(r: ServiceRecordEntity) = dao.update(r)
 

@@ -40,7 +40,6 @@ import app.jwhabits.domain.CalendarMath
 import app.jwhabits.domain.ServiceMath
 import app.jwhabits.ui.LocalUndoer
 import app.jwhabits.ui.service.ServiceViewModel
-import app.jwhabits.ui.service.TimerButton
 import app.jwhabits.ui.study.CurrentMaterialNext
 import app.jwhabits.ui.study.StudyViewModel
 import app.jwhabits.ui.units.NextRowFor
@@ -78,8 +77,6 @@ fun TodayScreen(
     val studied by study.studiedToday.collectAsStateWithLifecycle()
     val currentId by study.currentId.collectAsStateWithLifecycle()
     val monthMinutes by service.currentMonthMinutes.collectAsStateWithLifecycle()
-    val running by service.running.collectAsStateWithLifecycle()
-    val now by service.nowTicker.collectAsStateWithLifecycle()
     val cal by calendar.state.collectAsStateWithLifecycle()
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -111,13 +108,11 @@ fun TodayScreen(
                 }
             }
         }
-        val r = running
         StatusRow(
             title = "奉仕",
-            status = if (r != null) "奉仕中 ${elapsed(now - (r.startEpochMs ?: now))} ・ 今月 ${ServiceMath.formatDuration(monthMinutes)}"
-            else "今月 ${ServiceMath.formatDuration(monthMinutes)}",
+            status = "今月 ${ServiceMath.formatDuration(monthMinutes)}",
             onClick = null,
-        ) { TimerButton(service, compact = true) }
+        )
 
         NextRowFor(state, bible)
         CurrentMaterialNext(currentId, onOpen = null)
@@ -132,11 +127,6 @@ fun TodayScreen(
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
         }
     }
-}
-
-private fun elapsed(ms: Long): String {
-    val s = maxOf(0L, ms / 1000)
-    return "%d:%02d:%02d".format(s / 3600, s % 3600 / 60, s % 60)
 }
 
 @Composable

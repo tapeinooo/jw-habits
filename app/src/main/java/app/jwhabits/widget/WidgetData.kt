@@ -57,11 +57,18 @@ object WidgetData {
 
     suspend fun bibleNext(app: JwHabitsApp): Next? = next(app, AppDatabase.MATERIAL_BIBLE_READING)
 
-    /** 今使っている資料の「次」。選んでいなければ null。 */
+    /**
+     * 個人研究の「次」。今使っている資料を選んでいればそれ。選んでいない（または外した）ときは、
+     * 最後に記録した資料、それもなければ一覧の最初の資料。資料が1つもなければ null。
+     */
     suspend fun studyNext(app: JwHabitsApp): Next? {
         val id = app.studyPrefs.current.value
-        if (id == StudyPrefs.NONE) return null
-        return next(app, id)
+        if (id != StudyPrefs.NONE) next(app, id)?.let { return it }
+        val materials = app.db.materialDao().getByHabit(AppDatabase.HABIT_STUDY)
+        val recent = materials.maxByOrNull { m ->
+            app.db.unitRecordDao().getRound(m.id, m.round).maxOfOrNull { it.id } ?: -1L
+        }
+        return (recent ?: materials.firstOrNull())?.let { next(app, it.id) }
     }
 
     data class Timer(val startMs: Long?, val monthMinutes: Long)

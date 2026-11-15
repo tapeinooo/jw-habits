@@ -128,6 +128,8 @@ class ServiceViewModel(
         onUndo("${ServiceMath.formatDuration(minutes.toLong())} を足しました") { repo.delete(id) }
     }
 
+    fun adjustDay(date: LocalDate, deltaMinutes: Int) = viewModelScope.launch { repo.adjustDay(date, deltaMinutes) }
+
     fun save(r: ServiceRecordEntity) = viewModelScope.launch { repo.update(r) }
 
     fun delete(r: ServiceRecordEntity, onUndo: OfferUndo) = viewModelScope.launch {
