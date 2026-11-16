@@ -254,7 +254,8 @@ private fun DaySheet(
     val adjustable = records.filter { it.minutes != null && it.startEpochMs == null && it.endEpochMs == null }
         .maxByOrNull { it.id }
     val others = records.filter { it.id != adjustable?.id }
-    val steps = listOf(60 to "1時間", 30 to "30分", 15 to "15分", 5 to "5分")
+    // 少ない時間を左、多い時間を右に
+    val steps = listOf(5 to "5分", 15 to "15分", 30 to "30分", 60 to "1時間")
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp),

@@ -49,6 +49,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
+import app.jwhabits.domain.BibleFocus
+import app.jwhabits.domain.ReadMark
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -119,16 +122,26 @@ fun BibleUnits(
     menuExtras: @Composable ColumnScope.(close: () -> Unit) -> Unit = {},
 ) {
     var bookNumber by rememberSaveable { mutableStateOf<Int?>(null) }
+    // 開いたときに1度だけ：読みかけの書があればそれを開き、ちょうど読み終えた書なら一覧でその書を中央に
+    var focused by rememberSaveable { mutableStateOf(false) }
+    var centerBook by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(state.loaded) {
+        if (!state.loaded || focused) return@LaunchedEffect
+        focused = true
+        BibleFocus.of(state.read.values.map { ReadMark(it.id, it.unitIndex) })?.let { f ->
+            if (f.finished) centerBook = f.book.number else bookNumber = f.book.number
+        }
+    }
     val current = bookNumber
     if (current == null) {
         if (onExit != null) {
             BackHandler(onBack = onExit)
             Column(Modifier.fillMaxSize()) {
                 UnitTopBar(listTitle.orEmpty(), "資料の一覧へ", onExit) { close -> menuExtras(close) }
-                BookList(state, vm, onOpenBook = { bookNumber = it.number }, modifier = Modifier.weight(1f))
+                BookList(state, vm, onOpenBook = { bookNumber = it.number }, modifier = Modifier.weight(1f), centerBook = centerBook)
             }
         } else {
-            BookList(state, vm, onOpenBook = { bookNumber = it.number })
+            BookList(state, vm, onOpenBook = { bookNumber = it.number }, centerBook = centerBook)
         }
     } else {
         BackHandler { bookNumber = null }
@@ -137,12 +150,31 @@ fun BibleUnits(
 }
 
 @Composable
-private fun BookList(state: UnitUiState, vm: UnitViewModel, onOpenBook: (BibleBook) -> Unit, modifier: Modifier = Modifier.fillMaxSize()) {
+private fun BookList(
+    state: UnitUiState,
+    vm: UnitViewModel,
+    onOpenBook: (BibleBook) -> Unit,
+    modifier: Modifier = Modifier.fillMaxSize(),
+    centerBook: Int? = null,
+) {
     var confirmNextRound by remember { mutableStateOf(false) }
+    val gridState = rememberLazyGridState()
+    LaunchedEffect(centerBook) {
+        val n = centerBook ?: return@LaunchedEffect
+        // 並び：0 上の欄、1 ヘブライ語聖書の見出し、2..40 創世記〜マラキ、41 ギリシャ語聖書の見出し、42.. マタイ〜
+        val index = if (n <= 39) 1 + n else 2 + n
+        gridState.scrollToItem(index)
+        withFrameNanos { }
+        val info = gridState.layoutInfo
+        val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return@LaunchedEffect
+        val viewport = info.viewportEndOffset - info.viewportStartOffset
+        gridState.scrollBy((item.offset.y - (viewport - item.size.height) / 2).toFloat())
+    }
     val full: (androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> GridItemSpan) = { GridItemSpan(maxLineSpan) }
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(76.dp),
+        state = gridState,
         modifier = modifier,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),

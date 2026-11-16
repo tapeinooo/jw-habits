@@ -16,3 +16,19 @@ object ReadingProgress {
 
     fun range(a: Int, b: Int): IntRange = if (a <= b) a..b else b..a
 }
+
+/** 聖書通読のタブを開いたときに見せる書。 */
+object BibleFocus {
+    /** book = 最後に記録した章の書。finished = その書を（今の周で）読み終えている。 */
+    data class Focus(val book: BibleBook, val finished: Boolean)
+
+    /** 記録がなければ null。 */
+    fun of(marks: Collection<ReadMark>): Focus? {
+        val last = marks.maxByOrNull { it.id } ?: return null
+        if (last.unitIndex !in 0 until BibleBooks.totalChapters) return null
+        val book = BibleBooks.chapterAt(last.unitIndex).book
+        val read = marks.mapTo(HashSet()) { it.unitIndex }
+        val finished = (book.firstIndex until book.firstIndex + book.chapters).all { it in read }
+        return Focus(book, finished)
+    }
+}
