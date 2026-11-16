@@ -33,6 +33,18 @@ class StudyRepository(db: AppDatabase, private val clock: DayClock, private val 
         }
     }
 
+    /**
+     * 今取り組んでいる資料。今使っている資料を選んでいればそれ。選んでいない（外した）ときは
+     * 最後に記録した資料、それもなければ一覧の最初の資料。資料がなければ null。
+     */
+    suspend fun activeMaterialId(): Long? {
+        val list = materials.getByHabit(habit)
+        val chosen = prefs.current.value
+        if (list.any { it.id == chosen }) return chosen
+        val recent = list.maxByOrNull { m -> units.getRound(m.id, m.round).maxOfOrNull { it.id } ?: -1L }
+        return (recent ?: list.firstOrNull())?.id
+    }
+
     suspend fun create(spec: StudyTemplates.Spec): Long = materials.insert(
         MaterialEntity(
             habitId = habit, title = spec.title, unitLabel = spec.unitLabel, unitCount = spec.unitCount,

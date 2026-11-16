@@ -323,6 +323,15 @@ fun UnitCells(
     val haptics = LocalHapticFeedback.current
     val gridState = rememberLazyGridState()
     val today = state.today
+    // 開いたときに1度だけ、次の単位のマスを中央あたりに
+    var centered by remember { mutableStateOf(false) }
+    LaunchedEffect(state.loaded, state.nextIndex) {
+        if (centered || !state.loaded) return@LaunchedEffect
+        centered = true
+        val next = state.nextIndex ?: return@LaunchedEffect
+        val cell = (1..count).firstOrNull { indexOf(it) == next } ?: return@LaunchedEffect
+        centerGridItem(gridState, cell - 1)
+    }
 
     // なぞっている範囲（マスの番号 1始まり）
     var dragStart by remember { mutableStateOf<Int?>(null) }
@@ -448,7 +457,20 @@ fun UnitRows(
     val haptics = LocalHapticFeedback.current
     val today = vm.today()
     val scheme = MaterialTheme.colorScheme
-    androidx.compose.foundation.lazy.LazyColumn(modifier) {
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    var centered by remember { mutableStateOf(false) }
+    LaunchedEffect(state.loaded, state.nextIndex) {
+        if (centered || !state.loaded) return@LaunchedEffect
+        centered = true
+        val next = state.nextIndex ?: return@LaunchedEffect
+        listState.scrollToItem(next)
+        androidx.compose.runtime.withFrameNanos { }
+        val info = listState.layoutInfo
+        val item = info.visibleItemsInfo.firstOrNull { it.index == next } ?: return@LaunchedEffect
+        val viewport = info.viewportEndOffset - info.viewportStartOffset
+        listState.scrollBy((item.offset - (viewport - item.size) / 2).toFloat())
+    }
+    androidx.compose.foundation.lazy.LazyColumn(modifier, state = listState) {
         items(state.total, key = { it }) { index ->
             val record = state.read[index]
             val click = when (mode) {
@@ -484,4 +506,14 @@ fun UnitRows(
             }
         }
     }
+}
+
+/** グリッドの index 番目の項目を、画面の中央あたりに来るようにスクロールする。 */
+suspend fun centerGridItem(gridState: androidx.compose.foundation.lazy.grid.LazyGridState, index: Int) {
+    gridState.scrollToItem(index)
+    androidx.compose.runtime.withFrameNanos { }
+    val info = gridState.layoutInfo
+    val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return
+    val viewport = info.viewportEndOffset - info.viewportStartOffset
+    gridState.scrollBy((item.offset.y - (viewport - item.size.height) / 2).toFloat())
 }

@@ -74,6 +74,13 @@ private enum class AddStep { PICK, WATCHTOWER, MANUAL }
 @Composable
 fun StudyScreen(vm: StudyViewModel = viewModel(factory = StudyViewModel.Factory)) {
     var openId by rememberSaveable { mutableStateOf<Long?>(null) }
+    // タブを開いたときに1度だけ、今取り組んでいる資料を開く
+    var focused by rememberSaveable { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (focused) return@LaunchedEffect
+        focused = true
+        if (openId == null) openId = vm.activeMaterialId()
+    }
     val id = openId
     if (id != null) {
         MaterialScreen(id, vm, onBack = { openId = null })

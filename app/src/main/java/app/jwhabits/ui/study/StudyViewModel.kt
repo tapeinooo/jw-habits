@@ -40,6 +40,8 @@ class StudyViewModel(
 
     fun today(): LocalDate = repo.today()
 
+    suspend fun activeMaterialId(): Long? = repo.activeMaterialId()
+
     fun toggleToday(onUndo: OfferUndo) = viewModelScope.launch {
         val undo = repo.toggleToday()
         onUndo(if (undo.marked > 0) "今日研究したを記録しました" else "今日研究したを取り消しました", undo.run)
