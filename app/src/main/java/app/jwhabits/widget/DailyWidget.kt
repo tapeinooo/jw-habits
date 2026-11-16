@@ -47,6 +47,9 @@ class DailyWidget : GlanceAppWidget() {
         val studyNumber: String,
         val serviceMinutes: Long,
         val lessons: Int,
+        val alphaBible: Float = 1f,
+        val alphaStudy: Float = 1f,
+        val alphaService: Float = 0f,
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -59,19 +62,20 @@ class DailyWidget : GlanceAppWidget() {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Tile(
-                    done = d.bibleDone, bg = SILVER, fg = SILVER_INK,
+                    done = d.bibleDone, bg = SILVER, fg = SILVER_INK, alpha = d.alphaBible,
                     big = d.bibleNumber, small = d.bibleBook,
                     onClick = WidgetIntents.openApp(context, Tab.BIBLE.name),
                 )
                 Spacer(GlanceModifier.width(8.dp))
                 Tile(
-                    done = d.studyDone, bg = NAVY, fg = NAVY_INK,
+                    done = d.studyDone, bg = NAVY, fg = NAVY_INK, alpha = d.alphaStudy,
                     big = d.studyNumber, small = d.studyText,
                     onClick = WidgetIntents.openApp(context, Tab.STUDY.name),
                 )
                 Spacer(GlanceModifier.width(8.dp))
                 Column(
                     modifier = GlanceModifier.defaultWeight().fillMaxHeight()
+                        .background(ColorProvider(Color.Black.copy(alpha = d.alphaService))).cornerRadius(18.dp)
                         .padding(horizontal = 6.dp)
                         .clickable(WidgetIntents.openApp(context, Tab.SERVICE.name)),
                     verticalAlignment = Alignment.CenterVertically,
@@ -102,7 +106,12 @@ class DailyWidget : GlanceAppWidget() {
             study.countless -> study.material.title to ""
             else -> splitNumber(shortLabel(study.label))
         }
-        return Data(marks.bible, bBook, bNum, marks.study, sText, sNum, timer.monthMinutes, lessons)
+        return Data(
+            marks.bible, bBook, bNum, marks.study, sText, sNum, timer.monthMinutes, lessons,
+            WidgetStyle.get(app, WidgetStyle.Tile.BIBLE) / 100f,
+            WidgetStyle.get(app, WidgetStyle.Tile.STUDY) / 100f,
+            WidgetStyle.get(app, WidgetStyle.Tile.SERVICE) / 100f,
+        )
     }
 
     companion object {
@@ -143,9 +152,9 @@ private fun T(text: String, size: Int, color: Color, bold: Boolean = false, maxL
  * 番号があれば大きく、名前は上に小さく。番号がなければ名前を大きく。
  */
 @Composable
-private fun RowScope.Tile(done: Boolean, bg: Color, fg: Color, big: String, small: String, onClick: Action) {
-    val fill = if (done) bg.copy(alpha = 0.28f) else bg
-    val ink = if (done) Color.White.copy(alpha = 0.85f) else fg
+private fun RowScope.Tile(done: Boolean, bg: Color, fg: Color, alpha: Float, big: String, small: String, onClick: Action) {
+    val fill = bg.copy(alpha = if (done) alpha * 0.28f else alpha)
+    val ink = if (done) Color.White.copy(alpha = 0.85f) else if (alpha < 0.4f) Color.White else fg
     Box(
         modifier = GlanceModifier.defaultWeight().fillMaxHeight()
             .background(ColorProvider(fill)).cornerRadius(18.dp)
