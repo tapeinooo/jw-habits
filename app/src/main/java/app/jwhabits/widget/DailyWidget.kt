@@ -35,7 +35,7 @@ import java.time.YearMonth
 /**
  * 「今日の3つ」ウィジェット（1行）。
  * 左：聖書通読の次の章（シルバー）、中：今使っている資料の次（紺）、右：今月の奉仕時間とレッスンの数（透明）。
- * ラベルは出さず中身だけ。通読と研究は、まだの日ははっきりした色、済んだら薄くして ✓。タップでそれぞれのタブを開く。
+ * ラベルは出さず中身だけ。通読と研究は、まだの日は赤い点、済んだら ✓。背景の濃さは設定画面で。タップでそれぞれのタブを開く。
  */
 class DailyWidget : GlanceAppWidget() {
     data class Data(
@@ -148,16 +148,17 @@ private fun T(text: String, size: Int, color: Color, bold: Boolean = false, maxL
 }
 
 /**
- * まだ：はっきりした色。済んだ：薄くして右上に ✓。
+ * 背景は設定した濃さのまま（済んでも薄くしない）。
+ * まだ：右上に赤い点で注意。済んだ：文字を少し落として右上に ✓。
  * 番号があれば大きく、名前は上に小さく。番号がなければ名前を大きく。
  */
 @Composable
 private fun RowScope.Tile(done: Boolean, bg: Color, fg: Color, alpha: Float, big: String, small: String, onClick: Action) {
-    val fill = bg.copy(alpha = if (done) alpha * 0.28f else alpha)
-    val ink = if (done) Color.White.copy(alpha = 0.85f) else if (alpha < 0.4f) Color.White else fg
+    val base = if (alpha < 0.4f) Color.White else fg
+    val ink = if (done) base.copy(alpha = 0.55f) else base
     Box(
         modifier = GlanceModifier.defaultWeight().fillMaxHeight()
-            .background(ColorProvider(fill)).cornerRadius(18.dp)
+            .background(ColorProvider(bg.copy(alpha = alpha))).cornerRadius(18.dp)
             .clickable(onClick),
     ) {
         Column(
@@ -171,13 +172,13 @@ private fun RowScope.Tile(done: Boolean, bg: Color, fg: Color, alpha: Float, big
                 T(small, 24, ink, bold = true, maxLines = 2)
             }
         }
-        if (done) {
-            Box(GlanceModifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.TopEnd) {
-                T("✓", 22, Color.White, bold = true)
-            }
+        Box(GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 6.dp), contentAlignment = Alignment.TopEnd) {
+            if (done) T("✓", 22, base, bold = true) else T("●", 16, ALERT, bold = true)
         }
     }
 }
+
+private val ALERT = Color(0xFFFF4D4F)
 
 class DailyWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = DailyWidget()
