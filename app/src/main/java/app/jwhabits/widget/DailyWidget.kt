@@ -149,13 +149,13 @@ private fun T(text: String, size: Int, color: Color, bold: Boolean = false, maxL
 
 /**
  * 背景は設定した濃さのまま（済んでも薄くしない）。
- * まだ：右上に赤い点で注意。済んだ：文字を少し落として右上に ✓。
+ * まだ：右上に赤い点で注意。済んだ：右上に ✓。文字は透過しない。
  * 番号があれば大きく、名前は上に小さく。番号がなければ名前を大きく。
  */
 @Composable
 private fun RowScope.Tile(done: Boolean, bg: Color, fg: Color, alpha: Float, big: String, small: String, onClick: Action) {
-    val base = if (alpha < 0.4f) Color.White else fg
-    val ink = if (done) base.copy(alpha = 0.55f) else base
+    // 文字は透過させない。背景が薄いときだけ壁紙の上で読める白にする
+    val ink = if (alpha < 0.4f) Color.White else fg
     Box(
         modifier = GlanceModifier.defaultWeight().fillMaxHeight()
             .background(ColorProvider(bg.copy(alpha = alpha))).cornerRadius(18.dp)
@@ -173,7 +173,7 @@ private fun RowScope.Tile(done: Boolean, bg: Color, fg: Color, alpha: Float, big
             }
         }
         Box(GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 6.dp), contentAlignment = Alignment.TopEnd) {
-            if (done) T("✓", 22, base, bold = true) else T("●", 16, ALERT, bold = true)
+            if (done) T("✓", 22, ink, bold = true) else T("●", 16, ALERT, bold = true)
         }
     }
 }
