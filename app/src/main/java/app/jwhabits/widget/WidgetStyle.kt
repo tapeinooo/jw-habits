@@ -13,4 +13,14 @@ object WidgetStyle {
     fun set(c: Context, t: Tile, percent: Int) {
         prefs(c).edit().putInt(t.key, percent.coerceIn(0, 100)).apply()
     }
+
+    /** 文字の大きさ（%）。100% = 端末のフォント倍率が標準のときと同じ大きさ。 */
+    const val TEXT_MIN = 60
+    const val TEXT_MAX = 160
+
+    fun textScale(c: Context): Int = prefs(c).getInt("text_scale", 100).coerceIn(TEXT_MIN, TEXT_MAX)
+
+    fun setTextScale(c: Context, percent: Int) {
+        prefs(c).edit().putInt("text_scale", percent.coerceIn(TEXT_MIN, TEXT_MAX)).apply()
+    }
 }

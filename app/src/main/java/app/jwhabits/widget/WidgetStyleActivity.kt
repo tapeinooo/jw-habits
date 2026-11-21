@@ -38,6 +38,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableIntState
@@ -51,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,6 +96,7 @@ class WidgetStyleActivity : ComponentActivity() {
         val app = applicationContext
         val values = remember { specs.associate { it.tile to mutableIntStateOf(WidgetStyle.get(app, it.tile)) } }
         var previewDone by remember { mutableStateOf(false) }
+        val textScale = remember { mutableIntStateOf(WidgetStyle.textScale(app)) }
 
         Scaffold(
             topBar = {
@@ -120,7 +123,7 @@ class WidgetStyleActivity : ComponentActivity() {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 SectionTitle("プレビュー")
-                Preview(values, previewDone)
+                Preview(values, previewDone, textScale.intValue / 100f)
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                     listOf("まだ" to false, "済んだ" to true).forEachIndexed { i, (label, done) ->
                         SegmentedButton(
@@ -140,6 +143,14 @@ class WidgetStyleActivity : ComponentActivity() {
                 specs.forEach { spec ->
                     OpacityCard(spec, values.getValue(spec.tile)) { WidgetStyle.set(app, spec.tile, it) }
                 }
+
+                SectionTitle("文字の大きさ", top = 12)
+                Text(
+                    "端末のフォントサイズの設定には左右されない、固定の大きさです。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextSizeCard(textScale) { WidgetStyle.setTextScale(app, it) }
             }
         }
     }
@@ -183,13 +194,42 @@ class WidgetStyleActivity : ComponentActivity() {
     }
 
     @Composable
+    private fun TextSizeCard(state: MutableIntState, save: (Int) -> Unit) {
+        var v by state
+        ElevatedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "すべての文字", modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                    )
+                    Text("$v%", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                }
+                Slider(
+                    value = v.toFloat(),
+                    onValueChange = { v = (it / 5f).roundToInt() * 5; save(v) },
+                    valueRange = WidgetStyle.TEXT_MIN.toFloat()..WidgetStyle.TEXT_MAX.toFloat(),
+                )
+                Row(
+                    Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Hint("小さい")
+                    TextButton(onClick = { v = 100; save(100) }) { Text("100%に戻す") }
+                    Hint("大きい")
+                }
+            }
+        }
+    }
+
+    @Composable
     private fun Hint(text: String) {
         Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
     /** ホーム画面の上に置いたときの見え方（壁紙の代わりに濃い色のグラデーション）。 */
     @Composable
-    private fun Preview(values: Map<WidgetStyle.Tile, MutableIntState>, done: Boolean) {
+    private fun Preview(values: Map<WidgetStyle.Tile, MutableIntState>, done: Boolean, scale: Float) {
         Row(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
                 .background(Brush.linearGradient(listOf(Color(0xFF3B5578), Color(0xFF141B2B))))
@@ -197,39 +237,43 @@ class WidgetStyleActivity : ComponentActivity() {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             val (bible, study, service) = specs
-            PreviewTile(Modifier.weight(1f), bible, values.getValue(bible.tile).intValue, "創世記", "4", done)
-            PreviewTile(Modifier.weight(1f), study, values.getValue(study.tile).intValue, "ミカ書", "", done)
-            PreviewTile(Modifier.weight(1f), service, values.getValue(service.tile).intValue, "52:30", "3件", null)
+            PreviewTile(Modifier.weight(1f), bible, values.getValue(bible.tile).intValue, "創世記", "4", done, scale)
+            PreviewTile(Modifier.weight(1f), study, values.getValue(study.tile).intValue, "ミカ書", "", done, scale)
+            PreviewTile(Modifier.weight(1f), service, values.getValue(service.tile).intValue, "52:30", "3件", null, scale)
         }
     }
 
-    /** done = null は済んだ／まだの印を出さない（奉仕）。 */
+    /** done = null は済んだ／まだの印を出さない（奉仕）。文字はウィジェットと同じ dp の大きさ。 */
     @Composable
-    private fun PreviewTile(modifier: Modifier, spec: TileSpec, percent: Int, small: String, big: String, done: Boolean?) {
+    private fun PreviewTile(
+        modifier: Modifier, spec: TileSpec, percent: Int, small: String, big: String, done: Boolean?, scale: Float,
+    ) {
+        val density = LocalDensity.current
+        fun sz(n: Int) = with(density) { (n * scale).dp.toSp() }
         val alpha = percent / 100f
         val ink = if (alpha < 0.4f) Color.White else spec.ink
-        Box(modifier.height(76.dp).clip(RoundedCornerShape(16.dp)).background(spec.color.copy(alpha = alpha))) {
+        Box(modifier.height(96.dp).clip(RoundedCornerShape(16.dp)).background(spec.color.copy(alpha = alpha))) {
             Column(
-                Modifier.fillMaxSize().padding(horizontal = 10.dp),
+                Modifier.fillMaxSize().padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = if (done == null) Alignment.CenterHorizontally else Alignment.Start,
             ) {
                 when {
                     done == null -> {
-                        Text(small, color = ink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        Text(big, color = ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(small, color = ink, fontSize = sz(30), fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text(big, color = ink, fontSize = sz(18), fontWeight = FontWeight.Bold)
                     }
                     big.isNotEmpty() -> {
-                        Text(small, color = ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text(big, color = ink, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(small, color = ink, fontSize = sz(16), fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text(big, color = ink, fontSize = sz(32), fontWeight = FontWeight.Bold)
                     }
-                    else -> Text(small, color = ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    else -> Text(small, color = ink, fontSize = sz(24), maxLines = 2, fontWeight = FontWeight.Bold)
                 }
             }
             if (done != null) {
                 Box(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.TopEnd) {
-                    if (done) Text("✓", color = ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    else Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF4D4F)))
+                    if (done) Text("✓", color = ink, fontSize = sz(22), fontWeight = FontWeight.Bold)
+                    else Box(Modifier.size((10 * scale).dp).clip(CircleShape).background(Color(0xFFFF4D4F)))
                 }
             }
         }

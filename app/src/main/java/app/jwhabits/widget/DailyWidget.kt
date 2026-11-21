@@ -1,12 +1,19 @@
 package app.jwhabits.widget
 
 import android.content.Context
+import android.util.TypedValue
+import android.view.Gravity
+import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
+import android.widget.RemoteViews
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.graphics.toArgb
+import androidx.glance.LocalContext
+import androidx.glance.appwidget.AndroidRemoteViews
+import app.jwhabits.R
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
 import androidx.glance.layout.Box
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
@@ -50,6 +57,7 @@ class DailyWidget : GlanceAppWidget() {
         val alphaBible: Float = 1f,
         val alphaStudy: Float = 1f,
         val alphaService: Float = 0f,
+        val textScale: Float = 1f,
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -57,6 +65,7 @@ class DailyWidget : GlanceAppWidget() {
         val initial = load(app)
         provideContent {
             val d = rememberWidgetData(initial) { load(app) }
+            CompositionLocalProvider(LocalTextScale provides d.textScale) {
             Row(
                 modifier = GlanceModifier.fillMaxSize().padding(2.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -81,9 +90,10 @@ class DailyWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    T(hm(d.serviceMinutes), 30, WHITE, bold = true)
-                    T("${d.lessons}件", 18, WHITE, bold = true)
+                    T(hm(d.serviceMinutes), 30, WHITE, gravity = Gravity.CENTER_HORIZONTAL)
+                    T("${d.lessons}件", 18, WHITE, gravity = Gravity.CENTER_HORIZONTAL)
                 }
+            }
             }
         }
     }
@@ -111,6 +121,7 @@ class DailyWidget : GlanceAppWidget() {
             WidgetStyle.get(app, WidgetStyle.Tile.BIBLE) / 100f,
             WidgetStyle.get(app, WidgetStyle.Tile.STUDY) / 100f,
             WidgetStyle.get(app, WidgetStyle.Tile.SERVICE) / 100f,
+            WidgetStyle.textScale(app) / 100f,
         )
     }
 
@@ -136,15 +147,27 @@ class DailyWidget : GlanceAppWidget() {
     }
 }
 
+/** 文字の大きさの倍率（設定画面の「文字の大きさ」）。 */
+private val LocalTextScale = compositionLocalOf { 1f }
+
+/**
+ * 文字。sp ではなく dp で指定する（ランチャーがフォント倍率を拾い損ねても大きさが変わらないように）。
+ * Glance の Text は sp しか使えないので、RemoteViews の TextView を直接使う。
+ */
 @Composable
-private fun T(text: String, size: Int, color: Color, bold: Boolean = false, maxLines: Int = 1) {
-    Text(
-        text, maxLines = maxLines,
-        style = TextStyle(
-            color = ColorProvider(color), fontSize = size.sp,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
-        ),
-    )
+private fun T(text: String, size: Int, color: Color, maxLines: Int = 1, gravity: Int = Gravity.START) {
+    val ctx = LocalContext.current
+    val scale = LocalTextScale.current
+    val rv = RemoteViews(ctx.packageName, R.layout.widget_text).apply {
+        setTextViewText(R.id.widget_text, text)
+        setTextViewTextSize(R.id.widget_text, TypedValue.COMPLEX_UNIT_DIP, size * scale)
+        setTextColor(R.id.widget_text, color.toArgb())
+        setInt(R.id.widget_text, "setMaxLines", maxLines)
+        setInt(R.id.widget_text, "setGravity", gravity or Gravity.CENTER_VERTICAL)
+    }
+    // 埋め込んだ View は大きさを決めないと高さいっぱいに広がるので、行の高さを明示する
+    val h = (size * scale * 1.3f * maxLines).dp
+    AndroidRemoteViews(rv, modifier = GlanceModifier.fillMaxWidth().height(h))
 }
 
 /**
@@ -166,14 +189,14 @@ private fun RowScope.Tile(done: Boolean, bg: Color, fg: Color, alpha: Float, big
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (big.isNotEmpty()) {
-                T(small, 16, ink, bold = true)
-                T(big, 32, ink, bold = true)
+                T(small, 16, ink)
+                T(big, 32, ink)
             } else {
-                T(small, 24, ink, bold = true, maxLines = 2)
+                T(small, 24, ink, maxLines = 2)
             }
         }
         Box(GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 6.dp), contentAlignment = Alignment.TopEnd) {
-            if (done) T("✓", 22, ink, bold = true) else T("●", 16, ALERT, bold = true)
+            if (done) T("✓", 22, ink, gravity = Gravity.END) else T("●", 16, ALERT, gravity = Gravity.END)
         }
     }
 }
