@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ウィジェットの文字。大きさは dp で指定し、端末のフォント倍率に左右されない。 -->
+<!-- ウィジェットの文字。大きさは px で指定し、端末のフォント倍率や表示サイズの読み違いに左右されない。 -->
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_text"
     android:layout_width="match_parent"

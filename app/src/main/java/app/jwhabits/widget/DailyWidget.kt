@@ -151,7 +151,7 @@ class DailyWidget : GlanceAppWidget() {
 private val LocalTextScale = compositionLocalOf { 1f }
 
 /**
- * 文字。sp ではなく dp で指定する（ランチャーがフォント倍率を拾い損ねても大きさが変わらないように）。
+ * 文字。sp でも dp でもなく px で指定する（ランチャーがフォント倍率や表示サイズを拾い損ねても大きさが変わらないように）。
  * Glance の Text は sp しか使えないので、RemoteViews の TextView を直接使う。
  */
 @Composable
@@ -160,7 +160,10 @@ private fun T(text: String, size: Int, color: Color, maxLines: Int = 1, gravity:
     val scale = LocalTextScale.current
     val rv = RemoteViews(ctx.packageName, R.layout.widget_text).apply {
         setTextViewText(R.id.widget_text, text)
-        setTextViewTextSize(R.id.widget_text, TypedValue.COMPLEX_UNIT_DIP, size * scale)
+        // px で渡す：ランチャーが「表示サイズ」の倍率を拾い損ねても、文字の大きさが変わらないように。
+        // px の値はこのアプリ側の（正しい）表示サイズで計算する。
+        val px = size * scale * ctx.resources.displayMetrics.density
+        setTextViewTextSize(R.id.widget_text, TypedValue.COMPLEX_UNIT_PX, px)
         setTextColor(R.id.widget_text, color.toArgb())
         setInt(R.id.widget_text, "setMaxLines", maxLines)
         setInt(R.id.widget_text, "setGravity", gravity or Gravity.CENTER_VERTICAL)
