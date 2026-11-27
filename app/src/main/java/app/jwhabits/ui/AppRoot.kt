@@ -29,6 +29,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.jwhabits.domain.SharedPayload
@@ -103,7 +104,10 @@ fun AppRoot(
                 }
             },
         ) { padding ->
-            Box(Modifier.padding(padding).fillMaxSize()) {
+            androidx.compose.foundation.layout.Column(Modifier.padding(padding).fillMaxSize()) {
+                // 新しい版があれば、いちばん上に知らせ（設定を開いているときは設定の中に出す）
+                if (!showSettings) app.jwhabits.update.UpdateBanner(Modifier.padding(8.dp))
+            Box(Modifier.weight(1f).fillMaxSize()) {
                 if (showSettings) {
                     SettingsScreen(onBack = { showSettings = false })
                 } else {
@@ -118,6 +122,7 @@ fun AppRoot(
                         Tab.SERVICE -> ServiceScreen()
                     }
                 }
+            }
             }
         }
         pendingShare.value?.let { payload ->

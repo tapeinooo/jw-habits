@@ -66,6 +66,9 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
             Text("設定", style = MaterialTheme.typography.headlineSmall)
         }
 
+        app.jwhabits.update.UpdateSection()
+        HorizontalDivider()
+
         Text("日付の切り替わり", style = MaterialTheme.typography.titleMedium)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("日付が変わる時刻")

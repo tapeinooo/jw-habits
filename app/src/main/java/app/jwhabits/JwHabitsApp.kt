@@ -42,6 +42,8 @@ class JwHabitsApp : Application() {
         super.onCreate()
         // タイマーが動いている間だけ通知を出す。アプリ起動時にも出し直す。
         observeForWidgets()
+        // 新しい版があるか確かめる（あれば今日の画面・設定に知らせが出る）
+        appScope.launch(Dispatchers.IO) { app.jwhabits.update.Updater.check(this@JwHabitsApp) }
         appScope.launch {
             service.running.collect { r ->
                 val start = r?.startEpochMs

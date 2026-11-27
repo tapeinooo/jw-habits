@@ -1,0 +1,17 @@
+name: check
+# ビルドとテストが通るかだけを確かめる（リリースは今のところ Mac の scripts/release.sh。署名の鍵が Mac にあるため）
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew --no-daemon testDebugUnitTest assembleDebug

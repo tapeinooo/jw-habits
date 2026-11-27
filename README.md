@@ -1,7 +1,7 @@
 # jw-habits
 
 聖書通読・個人研究・奉仕時間を1タップで記録する個人用 Android アプリ。
-Kotlin + Jetpack Compose + Room + Glance。保存は端末内だけ（通信の権限なし）。
+Kotlin + Jetpack Compose + Room + Glance。保存は端末内だけ。通信はアプリの更新（GitHub の Releases を見る・落とす）にだけ使う。
 
 ## ビルド
 
@@ -17,6 +17,10 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 GitHub にログインしたブラウザで開くと、いつも最新版の APK が落ちてくる:
 https://github.com/tapeinooo/jw-habits/releases/latest/download/jw-habits.apk
+
+## アプリの中の更新
+
+起動時と、設定のいちばん上の「更新を確認」で最新のリリースを見て、新しければ知らせが出る（「更新する」で落としてインストール）。リリースのタグは「v」＋ versionName、添付は jw-habits.apk にする（scripts/release.sh がそうする）。
 
 ## リリース
 
