@@ -14,5 +14,7 @@ https://raw.githubusercontent.com/tapeinooo/app-rules/main/RULES.md を開く）
 
 ## このアプリだけの決まり
 
-- 【例外・移行中】リリースはまだ Mac の scripts/release.sh（署名が Mac の debug 鍵のため）。版の番号も手で上げる（タグは「v」＋ versionName、添付は jw-habits.apk。アプリの中の更新は versionName をくらべる）。GitHub Actions はビルドとテストの確認だけ。鍵をリポジトリに移したら共通ルールの方式に切り替える。
+- 【例外】署名の鍵は Mac の debug 鍵（app/debug.keystore、パスワード android、別名 androiddebugkey）。鍵がまだリポジトリにない間は、GitHub Actions はビルドしない。
+- 【例外】版の番号：手で付けていた頃（0.7.0・versionCode 21）より大きくするため、gradle.properties の versionOffset=100 を使う（versionName は 1.0.<実行番号>）。
+- 縮小（R8）は、Room・Glance・serialization の keep の確認が要るので、まだオフ。
 - 通信はアプリの更新にだけ使う。記録のデータは外に送らない。

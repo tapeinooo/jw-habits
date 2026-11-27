@@ -6,6 +6,16 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// 版の番号は GitHub Actions の実行番号から自動で決める（共通ルール）。
+// 手で番号を付けていた頃（0.7.0・versionCode 21）より大きくするため、gradle.properties の versionOffset を使う
+val buildNumber = (project.findProperty("buildNumber") as String?)?.toIntOrNull() ?: 1
+val versionOffset = (project.findProperty("versionOffset") as String?)?.toIntOrNull() ?: 0
+val versionMajor = (project.findProperty("versionMajor") as String?)?.toIntOrNull() ?: 1
+val appVersionName = "$versionMajor.0.$buildNumber"
+
+// GitHub Actions がリリースのタグ（v＋versionName）を作るのに使う
+tasks.register("printVersionName") { doLast { println(appVersionName) } }
+
 android {
     namespace = "app.jwhabits"
     compileSdk = 35
@@ -14,15 +24,29 @@ android {
         applicationId = "app.jwhabits"
         minSdk = 26
         targetSdk = 35
-        versionCode = 21
-        versionName = "0.7.0"
+        versionCode = buildNumber + versionOffset
+        // GitHub のリリースのタグは「v」＋ versionName（アプリの更新は versionName をくらべる）
+        versionName = appVersionName
+    }
+
+    // 署名：前から使っている Mac の debug 鍵をリポジトリに置いて使う（共通ルール。鍵が変わると上書きで更新できない）
+    signingConfigs {
+        create("release") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
         release {
+            // 縮小（R8）は Room・Glance・serialization の確認が要るので、今はオフのまま
             isMinifyEnabled = false
-            // 個人用。署名は debug 鍵で済ませる（ストアには出さない）
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
